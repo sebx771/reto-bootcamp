@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-[#FFF8F5]">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SmartOps - SuperBrix S.A. | FO-A-MA-01</title>
+  
+  <!-- Configuración PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#FFF8F5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description" content="Terminal táctil industrial para registro de tiempos y paros FO-A-MA-01">
+
+  <!-- CDNs: Tailwind CSS, Lucide Icons, html5-qrcode -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono (DESIGN.md) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Estilos Industriales Warm Horizon -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="h-full text-[#1F1B17] flex flex-col justify-between selection:bg-orange-200 selection:text-orange-950">
+
+  <!-- CONTENEDOR TOAST FLOTANTE -->
+  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col items-end pointer-events-none"></div>
+
+  <!-- APLICACIÓN PRINCIPAL (Layout Kiosco Industrial Warm Horizon) -->
+  <div class="w-full max-w-xl mx-auto min-h-screen flex flex-col px-3 py-2 sm:px-4 sm:py-3">
+
+    <!-- ==================================================
+         SECCIÓN A: HEADER PERSISTENTE & CONECTIVIDAD
+         ================================================== -->
+    <header class="industrial-card rounded-2xl p-3 mb-3">
+      <!-- Fila Superior: Marca, Semáforo de Red y Badge de Cola -->
+      <div class="flex items-center justify-between border-b border-[#F0E6E0] pb-2 mb-2">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#F97316] to-[#C2410C] flex items-center justify-center font-black tracking-wider text-white shadow-md shadow-orange-500/20">
+            SB
+          </div>
+          <div>
+            <h1 class="text-sm font-extrabold tracking-tight text-[#1F1B17] leading-tight">SMARTOPS</h1>
+            <p class="text-[10px] text-[#C2410C] font-mono font-bold tracking-wider">SUPERBRIX S.A. • FO-A-MA-01</p>
+          </div>
+        </div>
+
+        <!-- Semáforo de Red y Botón de Cola Offline -->
+        <button id="network-status-btn" type="button" class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#FFF8F5] hover:bg-[#FCF2EB] border border-[#EAE1DA] transition-all cursor-pointer">
+          <span id="network-led" class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10B981]"></span>
+          <span id="network-status-label" class="text-xs font-bold font-mono text-[#584237]">ONLINE</span>
+          
+          <!-- Badge de eventos pendientes en cola -->
+          <span id="offline-queue-badge" class="hidden ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-black bg-red-600 text-white animate-pulse">
+            <span id="queue-count-number">0</span>
+          </span>
+        </button>
+      </div>
+
+      <!-- Fila Inferior: Selectores Rápidos de Centro de Trabajo (CT) y Operario -->
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label for="select-ct" class="block text-[10px] font-bold text-[#8C7164] uppercase tracking-wider mb-1 flex items-center gap-1">
+            <i data-lucide="cpu" class="w-3 h-3 text-[#F97316]"></i> CT Operación
+          </label>
+          <select id="select-ct" class="w-full bg-[#FFF8F5] border border-[#EAE1DA] rounded-xl px-2.5 py-2 text-xs font-bold text-[#1F1B17] focus:outline-none focus:border-[#F97316] transition-colors">
+            <!-- Rellenado dinámicamente desde config.js -->
+          </select>
+        </div>
+
+        <div>
+          <label for="select-operario" class="block text-[10px] font-bold text-[#8C7164] uppercase tracking-wider mb-1 flex items-center gap-1">
+            <i data-lucide="user" class="w-3 h-3 text-[#F97316]"></i> Operario
+          </label>
+          <select id="select-operario" class="w-full bg-[#FFF8F5] border border-[#EAE1DA] rounded-xl px-2.5 py-2 text-xs font-bold text-[#1F1B17] focus:outline-none focus:border-[#F97316] transition-colors">
+            <!-- Rellenado dinámicamente desde config.js -->
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <!-- ==================================================
+         SECCIÓN B: TARJETA DE OP ACTIVA & ESCÁNER
+         ================================================== -->
+    <section class="industrial-card rounded-2xl p-3.5 mb-3">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-0.5">
+            <span class="text-[10px] uppercase font-extrabold text-[#8C7164] tracking-wider">Orden de Taller</span>
+            <span id="op-plano-badge" class="hidden text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-[#FFF2EB] text-[#C2410C] border border-[#FDBA74]">PL-0000</span>
+          </div>
+          <div id="op-codigo-display" class="text-xl sm:text-2xl font-black font-mono text-[#C2410C] tracking-tight truncate">
+            SIN OP ASIGNADA
+          </div>
+          <p id="op-descripcion-display" class="text-xs text-[#584237] truncate mt-0.5">
+            Escanee el código de barras o seleccione una orden demo para iniciar.
+          </p>
+        </div>
+
+        <!-- Botón Masivo Escanear OP -->
+        <button id="btn-abrir-scanner" type="button" class="flex-shrink-0 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-[#F97316] to-[#EA580C] hover:from-[#EA580C] hover:to-[#C2410C] active:scale-95 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1 shadow-md shadow-orange-500/25 cursor-pointer">
+          <i data-lucide="qr-code" class="w-6 h-6"></i>
+          <span>ESCANEAR</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ==================================================
+         SECCIÓN C: DISPLAY DE ESTADO OPERATIVO & CRONÓMETRO
+         ================================================== -->
+    <section class="flex-1 flex flex-col justify-center mb-3">
+      <!-- Banner de Alerta para Paro o Pausa (Oculto por defecto) -->
+      <div id="novedad-alert-banner" class="hidden">
+        <i data-lucide="alert-octagon" class="w-6 h-6 text-red-600 flex-shrink-0"></i>
+        <div id="novedad-banner-text" class="text-xs font-semibold"></div>
+      </div>
+
+      <!-- Tarjeta del Cronómetro Gigante -->
+      <div id="timer-box" class="timer-box rounded-3xl p-5 text-center">
+        <!-- Indicador de Estado con Baliza -->
+        <div class="flex items-center justify-center gap-2 mb-2">
+          <span id="status-beacon" class="beacon-dot beacon-idle"></span>
+          <span id="status-text" class="text-xs sm:text-sm font-extrabold tracking-widest uppercase text-[#584237] font-mono">
+            INACTIVO
+          </span>
+        </div>
+
+        <!-- Dígitos Gigantes de Cronómetro -->
+        <div id="cronometro-display" class="timer-display text-5xl sm:text-6xl md:text-7xl font-black py-1">
+          00:00:00
+        </div>
+
+        <p class="text-[11px] text-[#8C7164] font-bold uppercase tracking-wider mt-1">
+          Tiempo Acumulado de Labor
+        </p>
+      </div>
+    </section>
+
+    <!-- ==================================================
+         SECCIÓN D: MATRIZ 2x2 DE BOTONES MASIVOS (>76px)
+         ================================================== -->
+    <section class="grid grid-cols-2 gap-3 mb-2">
+      <!-- BOTÓN 1: INICIAR / REANUDAR -->
+      <button id="btn-iniciar" type="button" disabled class="btn-massive btn-prod">
+        <i data-lucide="play-circle" class="w-7 h-7"></i>
+        <span>INICIAR LABOR</span>
+      </button>
+
+      <!-- BOTÓN 2: PAUSAR -->
+      <button id="btn-pausar" type="button" disabled class="btn-massive btn-pause">
+        <i data-lucide="pause-circle" class="w-7 h-7"></i>
+        <span>PAUSAR</span>
+      </button>
+
+      <!-- BOTÓN 3: REPORTAR NOVEDAD (6 Causas SuperBrix) -->
+      <button id="btn-novedad" type="button" disabled class="btn-massive btn-novedad">
+        <i data-lucide="alert-triangle" class="w-7 h-7"></i>
+        <span>REPORTAR PARO</span>
+      </button>
+
+      <!-- BOTÓN 4: FINALIZAR OP -->
+      <button id="btn-finalizar" type="button" disabled class="btn-massive btn-finalizar">
+        <i data-lucide="check-circle" class="w-7 h-7"></i>
+        <span>FINALIZAR OP</span>
+      </button>
+    </section>
+
+    <!-- Footer Industrial -->
+    <footer class="text-center py-1 text-[10px] text-[#8C7164] font-mono">
+      SmartOps PWA • Formato FO-A-MA-01 • Identidad Warm Horizon SuperBrix S.A.
+    </footer>
+  </div>
+
+  <!-- ==================================================
+       MODAL 1: ESCÁNER QR & FALLBACK DE ÓRDENES DEMO
+       ================================================== -->
+  <div id="modal-scanner" class="modal-backdrop fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-content w-full max-w-md rounded-3xl p-5 overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-[#F0E6E0] mb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="camera" class="w-5 h-5 text-[#F97316]"></i>
+          <h3 class="font-extrabold text-lg text-[#1F1B17]">Escanear Orden de Taller</h3>
+        </div>
+        <button id="btn-cerrar-scanner" type="button" class="p-2 rounded-xl bg-[#F6ECE6] text-[#584237] hover:bg-[#EAE1DA]">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto flex-1 pr-1">
+        <!-- Visor de Cámara html5-qrcode -->
+        <div id="qr-reader-container" class="w-full bg-[#1F1B17] rounded-2xl overflow-hidden border border-[#EAE1DA] mb-3 min-h-[220px] flex items-center justify-center text-xs text-slate-300">
+          Iniciando cámara...
+        </div>
+
+        <div id="camera-fallback-notice" class="hidden p-3 rounded-xl bg-[#FFF2EB] border border-[#FDBA74] text-xs text-[#9D4300] mb-3">
+          <p class="font-bold">Cámara no disponible en este dispositivo o permisos no otorgados.</p>
+          <p class="text-[11px] text-[#C2410C] mt-0.5">Use las órdenes demo a continuación o ingrese el número manualmente.</p>
+        </div>
+
+        <!-- Ingreso Manual de OP -->
+        <div class="mb-4">
+          <label class="block text-xs font-bold text-[#8C7164] uppercase mb-1">Ingreso Numérico Manual</label>
+          <div class="flex gap-2">
+            <input id="input-op-manual" type="text" placeholder="Ej. 60211" class="flex-1 bg-[#FFF8F5] border border-[#EAE1DA] rounded-xl px-3 py-2 text-sm font-mono font-bold text-[#C2410C] focus:outline-none focus:border-[#F97316]">
+            <button id="btn-confirmar-op-manual" type="button" class="px-4 py-2 bg-[#F97316] hover:bg-[#EA580C] font-bold text-xs rounded-xl text-white">
+              CARGAR
+            </button>
+          </div>
+        </div>
+
+        <!-- Lista de OPs Demo para 1 toque -->
+        <div>
+          <label class="block text-xs font-bold text-[#8C7164] uppercase mb-2">Órdenes Demo (1 Toque)</label>
+          <div id="demo-ops-list" class="space-y-2">
+            <!-- Rellenado por scanner.js -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================
+       MODAL 2: REPORTE RÁPIDO DE CAUSAS FO-A-MA-01 (6 BOTONES)
+       ================================================== -->
+  <div id="modal-novedades" class="modal-backdrop fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-content w-full max-w-lg rounded-3xl p-5 overflow-hidden flex flex-col max-h-[92vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-[#F0E6E0] mb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="alert-triangle" class="w-6 h-6 text-[#EF4444]"></i>
+          <div>
+            <h3 class="font-extrabold text-lg text-[#1F1B17]">Causas Oficiales de Paro</h3>
+            <p class="text-[11px] text-[#8C7164]">Formato FO-A-MA-01 • Selección directa en 1 toque</p>
+          </div>
+        </div>
+        <button id="btn-cerrar-novedades" type="button" class="p-2 rounded-xl bg-[#F6ECE6] text-[#584237] hover:bg-[#EAE1DA]">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Cuadrícula 2x3 con las 6 Categorías Oficiales -->
+      <div class="overflow-y-auto flex-1 pr-1">
+        <div id="matriz-causas-rapidas" class="grid grid-cols-2 gap-3 mb-4">
+          <!-- Rellenado dinámicamente desde config.js -->
+        </div>
+
+        <!-- Acceso directo al asistente con IA -->
+        <button id="btn-abrir-ia-modal" type="button" class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-[#FFF2EB] to-[#FFF8F5] hover:bg-[#FFE8DC] border border-[#FDBA74] text-[#9D4300] text-sm font-bold flex items-center justify-center gap-2 transition-all">
+          <i data-lucide="sparkles" class="w-5 h-5 text-[#F97316]"></i>
+          <span>¿Causa imprevista o compleja? Asistir con IA</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================
+       MODAL 3: ASISTENTE DE TEXTO CON IA (GEMINI CLASSIFIER)
+       ================================================== -->
+  <div id="modal-ia" class="modal-backdrop fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-content w-full max-w-md rounded-3xl p-5 overflow-hidden flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-[#F0E6E0] mb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="sparkles" class="w-6 h-6 text-[#F97316]"></i>
+          <h3 class="font-extrabold text-lg text-[#1F1B17]">Clasificador Asistido IA</h3>
+        </div>
+        <button id="btn-cerrar-ia" type="button" class="p-2 rounded-xl bg-[#F6ECE6] text-[#584237] hover:bg-[#EAE1DA]">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <p class="text-xs text-[#584237] leading-relaxed">
+          Escriba la descripción del imprevisto en lenguaje cotidiano. El motor semántico clasificará automáticamente la novedad dentro de una de las 6 categorías oficiales de SuperBrix.
+        </p>
+
+        <textarea 
+          id="textarea-ia-texto" 
+          rows="3" 
+          placeholder="Ej: Se partió el inserto de desbaste porque la barra de acero traía una inclusión dura..."
+          class="w-full bg-[#FFF8F5] border border-[#EAE1DA] rounded-xl p-3 text-sm text-[#1F1B17] focus:outline-none focus:border-[#F97316]"></textarea>
+
+        <button id="btn-probar-ia" type="button" class="w-full py-3 bg-[#F97316] hover:bg-[#EA580C] text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2">
+          <i data-lucide="brain-circuit" class="w-5 h-5"></i>
+          <span>Analizar y Clasificar</span>
+        </button>
+
+        <!-- Tarjeta de resultado IA -->
+        <div id="ia-resultado-box" class="hidden p-3.5 rounded-xl bg-[#FFF2EB] border border-[#FDBA74] text-xs space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-[#9D4300] font-bold uppercase">Categoría Sugerida:</span>
+            <span id="ia-confianza-resultado" class="px-2 py-0.5 rounded bg-[#F97316] font-mono font-bold text-white text-[10px]"></span>
+          </div>
+          <div id="ia-categoria-resultado" class="text-base font-black text-[#1F1B17]"></div>
+          <p id="ia-explicacion-resultado" class="text-[#584237] text-[11px]"></p>
+          <button id="btn-aplicar-ia" type="button" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs mt-2">
+            Confirmar y Registrar Paro
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================
+       MODAL 4: PAUSAS RÁPIDAS
+       ================================================== -->
+  <div id="modal-pausa" class="modal-backdrop fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-content w-full max-w-sm rounded-3xl p-5">
+      <div class="flex items-center justify-between pb-3 border-b border-[#F0E6E0] mb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="pause-circle" class="w-5 h-5 text-[#F59E0B]"></i>
+          <h3 class="font-extrabold text-lg text-[#1F1B17]">Suspender Labor</h3>
+        </div>
+        <button id="btn-cerrar-pausa" type="button" class="p-2 rounded-xl bg-[#F6ECE6] text-[#584237] hover:bg-[#EAE1DA]">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <button type="button" data-motivo="Almuerzo / Refrigerio" class="btn-opcion-pausa w-full p-3 text-left rounded-xl bg-[#FFF8F5] hover:bg-[#FCF2EB] border border-[#EAE1DA] hover:border-[#F59E0B] font-bold text-sm text-[#1F1B17] flex items-center justify-between">
+          <span>Almuerzo / Refrigerio</span>
+          <i data-lucide="coffee" class="w-5 h-5 text-[#F59E0B]"></i>
+        </button>
+        <button type="button" data-motivo="Reunión / Charla Seguridad 5 Min" class="btn-opcion-pausa w-full p-3 text-left rounded-xl bg-[#FFF8F5] hover:bg-[#FCF2EB] border border-[#EAE1DA] hover:border-[#F59E0B] font-bold text-sm text-[#1F1B17] flex items-center justify-between">
+          <span>Charla 5 Min / Seguridad</span>
+          <i data-lucide="shield-check" class="w-5 h-5 text-[#F59E0B]"></i>
+        </button>
+        <button type="button" data-motivo="Relevo de Turno" class="btn-opcion-pausa w-full p-3 text-left rounded-xl bg-[#FFF8F5] hover:bg-[#FCF2EB] border border-[#EAE1DA] hover:border-[#F59E0B] font-bold text-sm text-[#1F1B17] flex items-center justify-between">
+          <span>Relevo de Turno</span>
+          <i data-lucide="users" class="w-5 h-5 text-[#F59E0B]"></i>
+        </button>
+        <button type="button" data-motivo="Aseo / Limpieza de Puesto" class="btn-opcion-pausa w-full p-3 text-left rounded-xl bg-[#FFF8F5] hover:bg-[#FCF2EB] border border-[#EAE1DA] hover:border-[#F59E0B] font-bold text-sm text-[#1F1B17] flex items-center justify-between">
+          <span>Limpieza y Orden (5S)</span>
+          <i data-lucide="sparkle" class="w-5 h-5 text-[#F59E0B]"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================
+       MODAL 5: CONFIRMACIÓN FINALIZAR OP
+       ================================================== -->
+  <div id="modal-finalizar" class="modal-backdrop fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-content w-full max-w-sm rounded-3xl p-5 text-center">
+      <div class="w-14 h-14 rounded-full bg-[#FFF2EB] border-2 border-[#FDBA74] flex items-center justify-center mx-auto mb-3 text-[#C2410C]">
+        <i data-lucide="check-square" class="w-8 h-8"></i>
+      </div>
+      <h3 class="font-extrabold text-xl text-[#1F1B17] mb-1">¿Finalizar Orden?</h3>
+      <p class="text-xs text-[#584237] mb-3">
+        Se cerrará la labor activa y se guardará el resumen en el formato FO-A-MA-01.
+      </p>
+
+      <div class="p-3 bg-[#FFF8F5] rounded-xl border border-[#EAE1DA] text-xs mb-4">
+        <div class="flex justify-between text-[#8C7164]">
+          <span>Tiempo Total Acumulado:</span>
+          <strong id="resumen-tiempo-final" class="font-mono text-[#C2410C] font-bold text-sm">00:00:00</strong>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <button id="btn-cancelar-finalizar" type="button" class="py-3 rounded-xl bg-[#F6ECE6] text-[#584237] hover:bg-[#EAE1DA] font-bold text-xs">
+          CANCELAR
+        </button>
+        <button id="btn-confirmar-finalizar" type="button" class="py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">
+          CONFIRMAR CIERRE
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================
+       MODAL 6: AUDITORÍA DE COLA OFFLINE E HISTORIAL
+       ================================================== -->
+  <div id="modal-historial" class="modal-backdrop fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="modal-content w-full max-w-md rounded-3xl p-5 max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-[#F0E6E0] mb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="database" class="w-5 h-5 text-[#F97316]"></i>
+          <h3 class="font-extrabold text-lg text-[#1F1B17]">Cola Offline & Historial</h3>
+        </div>
+        <button id="btn-cerrar-historial" type="button" class="p-2 rounded-xl bg-[#F6ECE6] text-[#584237] hover:bg-[#EAE1DA]">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="historial-cola-items" class="flex-1 overflow-y-auto pr-1">
+        <!-- Rellenado por app.js -->
+      </div>
+
+      <div class="pt-3 border-t border-[#F0E6E0] mt-2">
+        <button id="btn-forzar-sync" type="button" class="w-full py-3 rounded-xl bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-xs flex items-center justify-center gap-2">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          <span>Forzar Sincronización Ahora</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================
+       CARGA SECUENCIAL DE MÓDULOS JAVASCRIPT
+       ================================================== -->
+  <script src="js/config.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/scanner.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

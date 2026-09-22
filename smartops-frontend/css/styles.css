@@ -1,0 +1,269 @@
+/* ==========================================================================
+   SMARTOPS SUPERBRIX S.A. - SISTEMA DE DISEÑO WARM HORIZON
+   Identidad visual basada en DESIGN.md con ergonomía industrial táctil
+   ========================================================================== */
+
+:root {
+  /* Paleta Warm Horizon (DESIGN.md) */
+  --bg-canvas: #FFF8F5;
+  --surface-dim: #E2D8D2;
+  --surface-container-low: #FCF2EB;
+  --surface-container: #F6ECE6;
+  --surface-container-high: #F0E6E0;
+  --surface-card: #FFFFFF;
+  --border-card: #EAE1DA;
+  --border-card-hover: #FDBA74;
+  
+  --text-main: #1F1B17;
+  --text-muted: #584237;
+  --text-soft: #8C7164;
+  
+  /* Acentos Solares y Terracota */
+  --primary: #F97316;         /* Sunset Orange */
+  --primary-deep: #9D4300;
+  --secondary: #C2410C;       /* Deep Terracotta */
+  --tertiary: #FBBF24;        /* Warm Amber */
+  --tertiary-dark: #C49200;
+  
+  /* Señalética Industrial Operativa */
+  --status-prod: #10B981;     /* Forest Emerald */
+  --status-prod-glow: rgba(16, 185, 129, 0.35);
+  --status-pause: #F59E0B;    /* Warm Amber */
+  --status-pause-glow: rgba(245, 158, 11, 0.35);
+  --status-paro: #EF4444;     /* Coral Red */
+  --status-paro-glow: rgba(239, 68, 68, 0.35);
+  --status-idle: #A8A29E;     /* Stone Neutral */
+}
+
+/* Evitar retraso de 300ms en pantallas táctiles y deshabilitar zoom accidental */
+* {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+body {
+  background-color: var(--bg-canvas);
+  color: var(--text-main);
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Permitir interacción en campos de texto */
+input, textarea, select {
+  user-select: text;
+  font-family: inherit;
+}
+
+/* ==========================================================================
+   DISPLAY DE CRONÓMETRO GIGANTE WARM HORIZON
+   ========================================================================== */
+.timer-display {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: #1F1B17;
+}
+
+.timer-box {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FCF4EE 100%);
+  border: 2px solid #EAE1DA;
+  box-shadow: 0 4px 20px -4px rgba(249, 115, 22, 0.08), 0 2px 8px rgba(120, 113, 108, 0.04);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================================
+   BOTONES MASIVOS TÁCTILES (>76px) PARA GUANTES
+   ========================================================================== */
+.btn-massive {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  border-radius: 1rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  border-bottom: 4px solid rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  position: relative;
+}
+
+.btn-massive:active {
+  transform: translateY(2px) scale(0.98);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border-bottom-width: 2px;
+}
+
+.btn-massive:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  filter: grayscale(60%);
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Variantes de Color Warm Horizon */
+.btn-prod {
+  background: linear-gradient(180deg, #10B981 0%, #059669 100%);
+  color: #FFFFFF;
+  border-color: #047857;
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.btn-prod:hover:not(:disabled) {
+  background: linear-gradient(180deg, #34D399 0%, #059669 100%);
+}
+
+.btn-pause {
+  background: linear-gradient(180deg, #FBBF24 0%, #D97706 100%);
+  color: #FFFFFF;
+  border-color: #B45309;
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.btn-pause:hover:not(:disabled) {
+  background: linear-gradient(180deg, #FCD34D 0%, #D97706 100%);
+}
+
+.btn-novedad {
+  background: linear-gradient(180deg, #F87171 0%, #DC2626 100%);
+  color: #FFFFFF;
+  border-color: #B91C1C;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.btn-novedad:hover:not(:disabled) {
+  background: linear-gradient(180deg, #FCA5A5 0%, #DC2626 100%);
+}
+
+.btn-finalizar {
+  background: linear-gradient(180deg, #78716C 0%, #57534E 100%);
+  color: #FFFFFF;
+  border-color: #44403C;
+  box-shadow: 0 4px 14px rgba(87, 83, 78, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.btn-finalizar:hover:not(:disabled) {
+  background: linear-gradient(180deg, #A8A29E 0%, #57534E 100%);
+}
+
+/* ==========================================================================
+   BALIZAS DE ESTADO Y PULSOS LUMINOSOS
+   ========================================================================== */
+.beacon-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  position: relative;
+}
+
+.beacon-producing {
+  background-color: var(--status-prod);
+  box-shadow: 0 0 12px var(--status-prod);
+  animation: pulse-prod 1.8s infinite;
+}
+
+.beacon-paused {
+  background-color: var(--status-pause);
+  box-shadow: 0 0 12px var(--status-pause);
+  animation: pulse-pause 1.5s infinite;
+}
+
+.beacon-paro {
+  background-color: var(--status-paro);
+  box-shadow: 0 0 16px var(--status-paro);
+  animation: pulse-paro 0.8s infinite;
+}
+
+.beacon-idle {
+  background-color: var(--status-idle);
+  box-shadow: none;
+}
+
+@keyframes pulse-prod {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 var(--status-prod-glow); }
+  70% { transform: scale(1.15); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes pulse-pause {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 var(--status-pause-glow); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+@keyframes pulse-paro {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 var(--status-paro-glow); }
+  50% { transform: scale(1.25); box-shadow: 0 0 0 14px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* ==========================================================================
+   MODALES Y CAPAS SUPERPUESTAS WARM HORIZON
+   ========================================================================== */
+.modal-backdrop {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(31, 27, 23, 0.65);
+  transition: opacity 0.25s ease-out;
+}
+
+.modal-content {
+  background-color: #FFFFFF;
+  border: 1.5px solid #EAE1DA;
+  box-shadow: 0 20px 45px -10px rgba(120, 113, 108, 0.35), 0 8px 16px -6px rgba(249, 115, 22, 0.1);
+  color: var(--text-main);
+}
+
+/* Botones de Paro Rápido FO-A-MA-01 */
+.btn-causa {
+  min-height: 72px;
+  background-color: #FFF8F5;
+  border: 1.5px solid #EAE1DA;
+  transition: all 0.15s ease;
+}
+
+.btn-causa:hover {
+  background-color: #FFF2EB;
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.12);
+}
+
+.btn-causa:active {
+  transform: scale(0.98);
+  background-color: #FFE6D9;
+}
+
+/* Tarjeta y Contenedor Principal */
+.industrial-card {
+  background-color: #FFFFFF;
+  border: 1px solid #EAE1DA;
+  box-shadow: 0 1px 3px rgba(120, 113, 108, 0.04), 0 6px 16px -4px rgba(249, 115, 22, 0.04);
+}
+
+/* Toasts Cálidos */
+.toast-industrial {
+  box-shadow: 0 10px 25px -5px rgba(120, 113, 108, 0.25), 0 4px 10px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* Custom Scrollbars Warm */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FFF8F5;
+}
+::-webkit-scrollbar-thumb {
+  background: #D7CCC5;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #BCAFA8;
+}
