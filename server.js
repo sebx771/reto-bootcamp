@@ -26,6 +26,23 @@ const server = http.createServer((req, res) => {
     reqUrl = '/smartops-frontend/index.html';
   }
 
+  // Rewrite assets referenced with relative paths from index.html
+  // e.g. /css/styles.css → /smartops-frontend/css/styles.css
+  if (!reqUrl.startsWith('/smartops-frontend/')) {
+    const assetPrefixes = ['/css/', '/js/', '/images/', '/icons/'];
+    const rootAssets = ['/manifest.json', '/sw.js'];
+    if (assetPrefixes.some(p => reqUrl.startsWith(p)) || rootAssets.includes(reqUrl)) {
+      reqUrl = '/smartops-frontend' + reqUrl;
+    }
+  }
+
+  // Responder favicon inline para evitar el 404
+  if (reqUrl === '/favicon.ico') {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="#F97316"/><text x="16" y="22" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="16" fill="white">SB</text></svg>`;
+    res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'max-age=86400' });
+    return res.end(svg);
+  }
+
   const filePath = path.join(ROOT, reqUrl);
 
   // Evitar Directory Traversal
