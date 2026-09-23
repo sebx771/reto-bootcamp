@@ -303,14 +303,16 @@ const SmartOpsApp = {
   },
 
   /**
-   * Procesa el análisis de texto con IA en el modal
+   * Procesa el análisis de texto con IA en el modal (async — llama a Gemini)
    */
-  procesarClasificacionIA() {
+  async procesarClasificacionIA() {
     const input = document.getElementById('textarea-ia-texto');
     const resultadoContainer = document.getElementById('ia-resultado-box');
     const categoriaTexto = document.getElementById('ia-categoria-resultado');
     const confianzaTexto = document.getElementById('ia-confianza-resultado');
     const explicacionTexto = document.getElementById('ia-explicacion-resultado');
+    const btnProbar = document.getElementById('btn-probar-ia');
+    const fuenteBadge = document.getElementById('ia-fuente-badge');
 
     if (!input || !input.value.trim()) {
       SmartOpsAPI.mostrarNotificacion('Escriba una frase antes de analizar.', 'warning');
@@ -318,23 +320,62 @@ const SmartOpsApp = {
     }
 
     const texto = input.value.trim();
-    const res = SmartOpsAPI.clasificarTextoConIA(texto);
 
-    if (resultadoContainer) {
-      resultadoContainer.classList.remove('hidden');
-      if (categoriaTexto) categoriaTexto.textContent = `[${res.categoriaId}] ${res.categoriaNombre}`;
-      if (confianzaTexto) confianzaTexto.textContent = `${res.confianza}%`;
-      if (explicacionTexto) explicacionTexto.textContent = res.explicacion;
+    // Mostrar spinner en el botón y deshabilitar durante la llamada
+    if (btnProbar) {
+      btnProbar.disabled = true;
+      btnProbar.innerHTML = `
+        <svg class="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+        </svg>
+        <span>Consultando Gemini AI...</span>
+      `;
     }
 
-    const btnAplicar = document.getElementById('btn-aplicar-ia');
-    if (btnAplicar) {
-      btnAplicar.onclick = () => {
-        SmartOpsState.reportarNovedad(res.categoriaId, `[Asistido IA]: ${texto}`, 'IA-CLASIFICADO');
-        this.cerrarModal('modal-ia');
-        input.value = '';
-        resultadoContainer?.classList.add('hidden');
-      };
+    try {
+      const res = await SmartOpsAPI.clasificarTextoConIA(texto);
+
+      if (resultadoContainer) {
+        resultadoContainer.classList.remove('hidden');
+        if (categoriaTexto) categoriaTexto.textContent = `[${res.categoriaId}] ${res.categoriaNombre}`;
+        if (confianzaTexto) confianzaTexto.textContent = `${res.confianza}%`;
+        if (explicacionTexto) explicacionTexto.textContent = res.explicacion;
+
+        // Badge de fuente: Gemini vs. Local
+        if (fuenteBadge) {
+          if (res.fuenteIA === 'gemini') {
+            fuenteBadge.textContent = '✦ Gemini AI';
+            fuenteBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-300';
+          } else {
+            fuenteBadge.textContent = '⚡ Clasificación Local';
+            fuenteBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-300';
+          }
+        }
+      }
+
+      const btnAplicar = document.getElementById('btn-aplicar-ia');
+      if (btnAplicar) {
+        btnAplicar.onclick = () => {
+          SmartOpsState.reportarNovedad(res.categoriaId, `[Asistido IA]: ${texto}`, 'IA-CLASIFICADO');
+          this.cerrarModal('modal-ia');
+          input.value = '';
+          resultadoContainer?.classList.add('hidden');
+        };
+      }
+    } catch (err) {
+      SmartOpsAPI.mostrarNotificacion('Error al analizar. Intente de nuevo.', 'error');
+      console.error('[App] Error en clasificación IA:', err);
+    } finally {
+      // Restaurar botón
+      if (btnProbar) {
+        btnProbar.disabled = false;
+        btnProbar.innerHTML = `
+          <i data-lucide="brain-circuit" class="w-5 h-5"></i>
+          <span>Analizar y Clasificar</span>
+        `;
+        if (window.lucide) window.lucide.createIcons();
+      }
     }
   },
 

@@ -311,7 +311,10 @@
         <div id="ia-resultado-box" class="hidden p-3.5 rounded-xl bg-[#FFF2EB] border border-[#FDBA74] text-xs space-y-2">
           <div class="flex justify-between items-center">
             <span class="text-[#9D4300] font-bold uppercase">Categoría Sugerida:</span>
-            <span id="ia-confianza-resultado" class="px-2 py-0.5 rounded bg-[#F97316] font-mono font-bold text-white text-[10px]"></span>
+            <div class="flex items-center gap-1.5">
+              <span id="ia-fuente-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-300"></span>
+              <span id="ia-confianza-resultado" class="px-2 py-0.5 rounded bg-[#F97316] font-mono font-bold text-white text-[10px]"></span>
+            </div>
           </div>
           <div id="ia-categoria-resultado" class="text-base font-black text-[#1F1B17]"></div>
           <p id="ia-explicacion-resultado" class="text-[#584237] text-[11px]"></p>

@@ -109,90 +109,105 @@ const SmartOpsAPI = {
 
   /**
    * Motor de Asistencia IA: Clasifica un texto en lenguaje natural de operario
-   * en una de las 6 categorías oficiales de SuperBrix FO-A-MA-01
+   * Primero intenta llamar al backend (Gemini vía Google Apps Script).
+   * Si falla o hay timeout, hace fallback a las reglas semánticas locales.
    * @param {string} textoLibre
-   * @returns {Object}
+   * @returns {Promise<Object>} { categoriaId, categoriaNombre, confianza, explicacion, fuenteIA }
    */
-  clasificarTextoConIA(textoLibre) {
+  async clasificarTextoConIA(textoLibre) {
     if (!textoLibre || textoLibre.trim().length === 0) {
-      return {
-        categoria: 'HERRAMIENTA',
-        confianza: 50,
-        motivo: 'Texto vacío; asignada categoría por defecto'
-      };
-    }
-
-    const t = textoLibre.toLowerCase();
-
-    // Reglas semánticas industriales de SuperBrix
-    if (t.includes('materia') || t.includes('acero') || t.includes('barra') || t.includes('chapa') || 
-        t.includes('lámina') || t.includes('torcid') || t.includes('lote') || t.includes('material')) {
-      return {
-        categoriaId: 'MATERIAL',
-        categoriaNombre: 'Material',
-        confianza: 94,
-        explicacion: 'Detectadas referencias directas a materia prima o condiciones de suministro de corte.'
-      };
-    }
-
-    if (t.includes('broca') || t.includes('fresa') || t.includes('inserto') || t.includes('plaquita') || 
-        t.includes('desgaste') || t.includes('filo') || t.includes('cuchilla') || t.includes('afilado') || t.includes('pañol')) {
-      return {
-        categoriaId: 'HERRAMIENTA',
-        categoriaNombre: 'Herramienta',
-        confianza: 96,
-        explicacion: 'Se identifica anomalía en útiles de corte o necesidad de reemplazo de insertos.'
-      };
-    }
-
-    if (t.includes('alarma') || t.includes('motor') || t.includes('calent') || t.includes('servo') || 
-        t.includes('fuga') || t.includes('aceite') || t.includes('hidraul') || t.includes('neumat') || 
-        t.includes('husillo') || t.includes('variador') || t.includes('cnc') || t.includes('falla')) {
       return {
         categoriaId: 'FALLA_MAQUINA',
         categoriaNombre: 'Falla Máquina',
-        confianza: 95,
-        explicacion: 'Identificado desperfecto mecánico, eléctrico o de fluidos en la máquina.'
+        confianza: 50,
+        explicacion: 'Texto vacío; asignada categoría por defecto.',
+        fuenteIA: 'local'
       };
     }
 
-    if (t.includes('mordaza') || t.includes('centrado') || t.includes('montaje') || t.includes('reloj') || 
+    // ── Intento 1: Llamar al backend (Gemini vía Apps Script) ──────────────
+    try {
+      const endpoint = SmartOpsConfig.ENDPOINT_APPS_SCRIPT;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'CLASIFICAR_IA',
+          textoNovedad: textoLibre.trim()
+        }),
+        redirect: 'follow',
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // El backend responde { status: 'SUCCESS', categoria, causa, categoriaId }
+        if (data.status === 'SUCCESS' && data.categoriaId) {
+          return {
+            categoriaId: data.categoriaId,
+            categoriaNombre: data.categoriaNombre || data.categoria || data.categoriaId,
+            confianza: data.confianza || 92,
+            explicacion: data.causa || data.explicacion || 'Clasificado por Gemini AI.',
+            fuenteIA: 'gemini'
+          };
+        }
+      }
+    } catch (err) {
+      // Timeout o error de red → fallback silencioso a reglas locales
+      console.warn('[API] Gemini no disponible, usando clasificación local:', err.message);
+    }
+
+    // ── Intento 2: Fallback — Reglas semánticas locales ────────────────────
+    return this._clasificarLocal(textoLibre);
+  },
+
+  /**
+   * Reglas semánticas locales (fallback sin conexión)
+   * @private
+   */
+  _clasificarLocal(textoLibre) {
+    const t = textoLibre.toLowerCase();
+
+    if (t.includes('materia') || t.includes('acero') || t.includes('barra') || t.includes('chapa') ||
+        t.includes('lámina') || t.includes('torcid') || t.includes('lote') || t.includes('material')) {
+      return { categoriaId: 'MATERIAL', categoriaNombre: 'Material', confianza: 94,
+        explicacion: 'Detectadas referencias directas a materia prima o condiciones de suministro de corte.', fuenteIA: 'local' };
+    }
+    if (t.includes('broca') || t.includes('fresa') || t.includes('inserto') || t.includes('plaquita') ||
+        t.includes('desgaste') || t.includes('filo') || t.includes('cuchilla') || t.includes('afilado') || t.includes('pañol')) {
+      return { categoriaId: 'HERRAMIENTA', categoriaNombre: 'Herramienta', confianza: 96,
+        explicacion: 'Se identifica anomalía en útiles de corte o necesidad de reemplazo de insertos.', fuenteIA: 'local' };
+    }
+    if (t.includes('alarma') || t.includes('motor') || t.includes('calent') || t.includes('servo') ||
+        t.includes('fuga') || t.includes('aceite') || t.includes('hidraul') || t.includes('neumat') ||
+        t.includes('husillo') || t.includes('variador') || t.includes('cnc') || t.includes('falla')) {
+      return { categoriaId: 'FALLA_MAQUINA', categoriaNombre: 'Falla Máquina', confianza: 95,
+        explicacion: 'Identificado desperfecto mecánico, eléctrico o de fluidos en la máquina.', fuenteIA: 'local' };
+    }
+    if (t.includes('mordaza') || t.includes('centrado') || t.includes('montaje') || t.includes('reloj') ||
         t.includes('calibrar') || t.includes('cero') || t.includes('programa') || t.includes('g-code') || t.includes('setup')) {
-      return {
-        categoriaId: 'SETUP',
-        categoriaNombre: 'Setup / Ajuste',
-        confianza: 92,
-        explicacion: 'La labor corresponde a puesta a punto, fijación de mordazas o alineación de pieza.'
-      };
+      return { categoriaId: 'SETUP', categoriaNombre: 'Setup / Ajuste', confianza: 92,
+        explicacion: 'La labor corresponde a puesta a punto, fijación de mordazas o alineación de pieza.', fuenteIA: 'local' };
     }
-
-    if (t.includes('cota') || t.includes('tolerancia') || t.includes('medida') || t.includes('rugosidad') || 
+    if (t.includes('cota') || t.includes('tolerancia') || t.includes('medida') || t.includes('rugosidad') ||
         t.includes('rebaba') || t.includes('micrometro') || t.includes('calibre') || t.includes('defecto') || t.includes('calidad')) {
-      return {
-        categoriaId: 'CALIDAD',
-        categoriaNombre: 'Calidad',
-        confianza: 91,
-        explicacion: 'Incidente vinculado a especificaciones dimensionales o acabado geométrico.'
-      };
+      return { categoriaId: 'CALIDAD', categoriaNombre: 'Calidad', confianza: 91,
+        explicacion: 'Incidente vinculado a especificaciones dimensionales o acabado geométrico.', fuenteIA: 'local' };
     }
-
-    if (t.includes('plano') || t.includes('ingenier') || t.includes('supervisor') || t.includes('duda') || 
+    if (t.includes('plano') || t.includes('ingenier') || t.includes('supervisor') || t.includes('duda') ||
         t.includes('instrucc') || t.includes('especifica') || t.includes('visto bueno')) {
-      return {
-        categoriaId: 'INSTRUCCION',
-        categoriaNombre: 'Instrucción / Planos',
-        confianza: 93,
-        explicacion: 'Falta de información técnica, duda en cotas de plano o espera de validación técnica.'
-      };
+      return { categoriaId: 'INSTRUCCION', categoriaNombre: 'Instrucción / Planos', confianza: 93,
+        explicacion: 'Falta de información técnica, duda en cotas de plano o espera de validación técnica.', fuenteIA: 'local' };
     }
-
-    // Caso genérico fallback
-    return {
-      categoriaId: 'FALLA_MAQUINA',
-      categoriaNombre: 'Falla Máquina',
-      confianza: 75,
-      explicacion: 'Clasificado preventivamente como Falla Máquina / Novedad operativa imprevista.'
-    };
+    // Fallback genérico
+    return { categoriaId: 'FALLA_MAQUINA', categoriaNombre: 'Falla Máquina', confianza: 75,
+      explicacion: 'Clasificado preventivamente como Falla Máquina / Novedad operativa imprevista.', fuenteIA: 'local' };
   },
 
   /**
