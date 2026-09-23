@@ -8,9 +8,9 @@ const SmartOpsState = {
     estadoActual: SmartOpsConfig.ESTADOS.INACTIVO,
     opActiva: null,
     ctActual: 'CT-TORNO-01',
-    ctEmpleado: '01',
-    operarioActual: 'Carlos Mendoza',
-    operarioId: 'OP-101',
+    ctEmpleado: null,          // se puebla desde la DB al verificar al operario
+    operarioActual: null,      // se puebla desde la DB al verificar al operario
+    operarioId: null,          // cédula real; null hasta que el operario se identifique
     tiempoInicio: null,
     tiempoTranscurridoSegundos: 0,
     timerInterval: null,
@@ -64,30 +64,25 @@ const SmartOpsState = {
   set motivoPausa(value) { this.state.motivoPausa = value; },
 
   /**
+   * Establece el operario identificado desde la base de datos.
+   * Llamado por scanner.js tras una verificación exitosa.
+   * @param {{ id: string, nombre: string, ctEmpleado: string }} operario
+   */
+  setOperarioActual({ id, nombre, ctEmpleado }) {
+    this.setState({
+      operarioId: String(id),
+      operarioActual: nombre || 'Sin nombre',
+      ctEmpleado: ctEmpleado || ''
+    });
+    this.guardarSesion();
+  },
+
+  /**
    * Inicializa la máquina de estados y recupera sesión previa si existe
    */
   init() {
-    const ctSelect = document.getElementById('select-ct');
-    const operarioSelect = document.getElementById('select-operario');
-
-    if (ctSelect) {
-      this.ctActual = ctSelect.value;
-      ctSelect.addEventListener('change', (e) => {
-        this.ctActual = e.target.value;
-        this.guardarSesion();
-        this.notify();
-      });
-    }
-
-    if (operarioSelect) {
-      this.operarioActual = operarioSelect.value;
-      operarioSelect.addEventListener('change', (e) => {
-        this.operarioActual = e.target.value;
-        this.guardarSesion();
-        this.notify();
-      });
-    }
-
+    // CT-Operación: app.js registra el listener del select-ct.
+    // Operario: ya NO se asigna por dropdown; se identifica exclusivamente por scanner.
     const sesion = SmartOpsStorage.cargarEstadoSesion();
     if (sesion && sesion.opActiva) {
       this.restaurarSesion(sesion);
@@ -119,8 +114,20 @@ const SmartOpsState = {
    */
   iniciarProduccion() {
     if (!this.opActiva) {
-      SmartOpsAPI.mostrarNotificacion('Primero debe escanear o seleccionar una OP activa.', 'warning');
+      SmartOpsAPI.mostrarNotificacion('Primero debe seleccionar una Orden de Producción.', 'warning');
+      return;
+    }
+
+    if (!this.operarioId) {
+      SmartOpsAPI.mostrarNotificacion('Debe identificarse con su cédula antes de iniciar.', 'warning');
       document.getElementById('modal-scanner')?.classList.remove('hidden');
+      SmartOpsScanner.iniciarEscaner('qr-reader-container');
+      return;
+    }
+
+    const ctSelect = document.getElementById('select-ct');
+    if (!ctSelect || !ctSelect.value) {
+      SmartOpsAPI.mostrarNotificacion('Debe seleccionar el CT-Operación antes de iniciar.', 'warning');
       return;
     }
 
@@ -261,23 +268,40 @@ const SmartOpsState = {
   },
 
   /**
-   * Construye el payload estandarizado para el backend SuperBrix FO-A-MA-01
+   * Construye el payload estandarizado delegando en SmartOpsModels.
+   * Centraliza el contexto del estado y lo pasa al builder correspondiente.
+   * @param {string} tipoEvento
+   * @param {Object} dataAdicional
    */
   crearPayload(tipoEvento, dataAdicional = {}) {
-    return {
-      formato: 'FO-A-MA-01',
-      version: '2026.1',
+    const contexto = {
       op: this.opActiva ? this.opActiva.codigo : 'N/A',
-      operarioId: this.operarioId || 'SIN_ID',
-      nombreOperario: this.operarioActual,
-      ctOperacion: this.ctActual,
-      ctEmpleado: this.ctEmpleado || '01',
-      timestamp: new Date().toISOString(),
-      tipoEvento: tipoEvento,
       descripcionLabor: this.opActiva ? this.opActiva.descripcion : 'N/A',
       plano: this.opActiva?.plano || 'N/A',
-      ...dataAdicional
+      operarioId: this.operarioId,
+      nombreOperario: this.operarioActual,
+      ctEmpleado: this.ctEmpleado,
+      ctOperacion: this.ctActual
     };
+
+    switch (tipoEvento) {
+      case 'INICIO_PRODUCCION':
+        return SmartOpsModels.inicioProduccion(contexto, dataAdicional);
+      case 'PAUSA_LABOR':
+        return SmartOpsModels.pausaLabor(contexto, dataAdicional);
+      case 'PARO_NOVEDAD':
+        // dataAdicional trae categoriaDirecta (ID interno) → models lo traduce
+        return SmartOpsModels.paroNovedad(contexto, {
+          categoriaId: dataAdicional.categoriaDirecta,
+          codigoCausa: dataAdicional.codigoCausa,
+          textoNovedad: dataAdicional.textoNovedad,
+          duracionMinutos: dataAdicional.duracionMinutos
+        });
+      case 'CIERRE_OP':
+        return SmartOpsModels.cierreOP(contexto, dataAdicional);
+      default:
+        return SmartOpsModels.eventoPayload(tipoEvento, contexto, dataAdicional);
+    }
   },
 
   /**

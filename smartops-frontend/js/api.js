@@ -196,6 +196,58 @@ const SmartOpsAPI = {
   },
 
   /**
+   * Consulta al backend si una cédula corresponde a un operario registrado.
+   * Usa SmartOpsModels para construir el payload y normaliza la respuesta.
+   * @param {string} cedula - Número de cédula (solo dígitos)
+   * @returns {Promise<{ success: boolean, operario?: { id, nombre, ctEmpleado }, mensaje?: string }>}
+   */
+  async verificarOperario(cedula) {
+    try {
+      const endpoint = SmartOpsConfig.ENDPOINT_APPS_SCRIPT;
+      const payload = SmartOpsModels.verificarOperarioPayload(cedula);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+        redirect: 'follow',
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+
+      // Normalizar: el backend responde { status:"SUCCESS"|"ERROR", operario, mensaje }
+      // El resto del frontend espera { success:true|false, operario, mensaje }
+      if (data.status === 'SUCCESS' && data.operario) {
+        return {
+          success: true,
+          operario: {
+            id: String(cedula),                          // la DB no lo devuelve; usamos la cédula enviada
+            nombre: data.operario.nombre || 'Operario',
+            ctEmpleado: String(data.operario.ctEmpleado || '')
+          }
+        };
+      }
+
+      return {
+        success: false,
+        mensaje: data.mensaje || 'Operario no encontrado en la base de datos.'
+      };
+
+    } catch (err) {
+      console.error('[API] Error al verificar operario:', err.message);
+      return {
+        success: false,
+        mensaje: 'Error de conexión al verificar operario.'
+      };
+    }
+  },
+
+  /**
    * Despliega mensajes toast de alto contraste para el entorno industrial
    * @param {string} mensaje
    * @param {'success'|'warning'|'error'|'info'} tipo
