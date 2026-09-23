@@ -16,7 +16,10 @@ const SmartOpsState = {
     timerInterval: null,
     ultimoTimestampSegmento: null,
     novedadActiva: null,
-    motivoPausa: null
+    motivoPausa: null,
+    tiempoInicioPausa: null,
+    tiempoPausaAcumuladoSegundos: 0,
+    sesionesActivas: {}
   },
 
   listeners: [],
@@ -62,18 +65,65 @@ const SmartOpsState = {
   set novedadActiva(value) { this.state.novedadActiva = value; },
   get motivoPausa() { return this.state.motivoPausa; },
   set motivoPausa(value) { this.state.motivoPausa = value; },
+  get tiempoInicioPausa() { return this.state.tiempoInicioPausa; },
+  set tiempoInicioPausa(value) { this.state.tiempoInicioPausa = value; },
+  get tiempoPausaAcumuladoSegundos() { return this.state.tiempoPausaAcumuladoSegundos; },
+  set tiempoPausaAcumuladoSegundos(value) { this.state.tiempoPausaAcumuladoSegundos = value; },
+  get sesionesActivas() { return this.state.sesionesActivas; },
+  set sesionesActivas(value) { this.state.sesionesActivas = value; },
 
-  /**
-   * Establece el operario identificado desde la base de datos.
-   * Llamado por scanner.js tras una verificación exitosa.
-   * @param {{ id: string, nombre: string, ctEmpleado: string }} operario
-   */
   setOperarioActual({ id, nombre, ctEmpleado }) {
-    this.setState({
-      operarioId: String(id),
+    const nuevoId = String(id);
+    
+    // Si ya hay un operario y es diferente al nuevo, guardar su sesión
+    if (this.operarioId && this.operarioId !== nuevoId) {
+      if (this.estadoActual === SmartOpsConfig.ESTADOS.PRODUCCION) {
+        this.pausarLabor('Cambio de Operario (Multi-sesión)');
+      }
+      this.state.sesionesActivas[this.operarioId] = {
+        estadoActual: this.estadoActual,
+        opActiva: this.opActiva,
+        ctActual: this.ctActual,
+        tiempoInicio: this.tiempoInicio,
+        tiempoTranscurridoSegundos: this.tiempoTranscurridoSegundos,
+        novedadActiva: this.novedadActiva,
+        motivoPausa: this.motivoPausa,
+        tiempoInicioPausa: this.tiempoInicioPausa,
+        tiempoPausaAcumuladoSegundos: this.tiempoPausaAcumuladoSegundos,
+        operarioActual: this.operarioActual,
+        ctEmpleado: this.ctEmpleado
+      };
+    }
+
+    let newState = {
+      operarioId: nuevoId,
       operarioActual: nombre || 'Sin nombre',
       ctEmpleado: ctEmpleado || ''
-    });
+    };
+
+    // Restaurar si existe sesión para el nuevo operario
+    if (this.operarioId !== nuevoId && this.state.sesionesActivas[nuevoId]) {
+      newState = { ...newState, ...this.state.sesionesActivas[nuevoId] };
+    } else if (this.operarioId !== nuevoId) {
+      // Resetear variables operativas para operario nuevo
+      newState.estadoActual = SmartOpsConfig.ESTADOS.INACTIVO;
+      newState.opActiva = null;
+      newState.tiempoInicio = null;
+      newState.tiempoTranscurridoSegundos = 0;
+      newState.novedadActiva = null;
+      newState.motivoPausa = null;
+      newState.tiempoInicioPausa = null;
+      newState.tiempoPausaAcumuladoSegundos = 0;
+    }
+
+    this.setState(newState);
+
+    // Actualizar select del operario y UI
+    if (window.SmartOpsApp) {
+      window.SmartOpsApp.actualizarDisplayOperario({ id: this.operarioId, nombre: this.operarioActual });
+    }
+    
+    this.actualizarUI();
     this.guardarSesion();
   },
 
@@ -135,21 +185,30 @@ const SmartOpsState = {
     const esReanudacion = this.estadoActual === SmartOpsConfig.ESTADOS.PAUSA ||
       this.estadoActual === SmartOpsConfig.ESTADOS.PARO;
 
+    let duracionInterrupcionSegundos = 0;
+    if (esReanudacion && this.tiempoInicioPausa) {
+      duracionInterrupcionSegundos = Math.floor((ahora.getTime() - this.tiempoInicioPausa) / 1000);
+      this.tiempoPausaAcumuladoSegundos += duracionInterrupcionSegundos;
+    }
+
     if (!esReanudacion) {
       this.tiempoInicio = ahora.toISOString();
       this.tiempoTranscurridoSegundos = 0;
+      this.tiempoPausaAcumuladoSegundos = 0;
     }
 
     this.estadoActual = SmartOpsConfig.ESTADOS.PRODUCCION;
     this.novedadActiva = null;
     this.motivoPausa = null;
+    this.tiempoInicioPausa = null;
     this.ultimoTimestampSegmento = ahora.getTime();
 
     this.iniciarTicker();
 
     const payload = this.crearPayload('INICIO_PRODUCCION', {
       esReanudacion,
-      tiempoAcumuladoPrevioSegundos: this.tiempoTranscurridoSegundos
+      tiempoAcumuladoPrevioSegundos: this.tiempoTranscurridoSegundos,
+      duracionInterrupcionSegundos
     });
     SmartOpsAPI.enviarEvento(payload);
 
@@ -170,6 +229,7 @@ const SmartOpsState = {
     this.detenerTicker();
     this.estadoActual = SmartOpsConfig.ESTADOS.PAUSA;
     this.motivoPausa = motivo;
+    this.tiempoInicioPausa = Date.now();
 
     const payload = this.crearPayload('PAUSA_LABOR', {
       motivoPausa: motivo,
@@ -199,6 +259,7 @@ const SmartOpsState = {
 
     this.detenerTicker();
     this.estadoActual = SmartOpsConfig.ESTADOS.PARO;
+    this.tiempoInicioPausa = Date.now();
     this.novedadActiva = {
       categoriaId,
       codigoCausa,
@@ -248,6 +309,7 @@ const SmartOpsState = {
     const payload = this.crearPayload('CIERRE_OP', {
       tiempoTotalProduccionSegundos: duracionFinalSegundos,
       tiempoTotalFormato: duracionFormateada,
+      tiempoPausaAcumuladoSegundos: this.tiempoPausaAcumuladoSegundos,
       duracionMinutos: Math.round((this.tiempoTranscurridoSegundos / 60) * 10) / 10,
       novedadesRegistradas: this.novedadActiva ? [this.novedadActiva] : []
     });
@@ -260,6 +322,13 @@ const SmartOpsState = {
     this.tiempoTranscurridoSegundos = 0;
     this.novedadActiva = null;
     this.motivoPausa = null;
+    this.tiempoInicioPausa = null;
+    this.tiempoPausaAcumuladoSegundos = 0;
+
+    // Limpiar sesión del operario finalizado
+    if (this.operarioId && this.state.sesionesActivas[this.operarioId]) {
+      delete this.state.sesionesActivas[this.operarioId];
+    }
 
     SmartOpsStorage.limpiarEstadoSesion();
     this.actualizarTimerDisplay(0);
@@ -450,11 +519,11 @@ const SmartOpsState = {
         }
         if (novedadBanner) novedadBanner.classList.add('hidden');
         if (btnIniciar) {
-          btnIniciar.disabled = !this.opActiva;
+          btnIniciar.disabled = !this.opActiva || !this.operarioId;
           btnIniciar.innerHTML = '<i data-lucide="play-circle" class="w-7 h-7"></i><span>INICIAR LABOR</span>';
         }
         if (btnPausar) btnPausar.disabled = true;
-        if (btnNovedad) btnNovedad.disabled = !this.opActiva;
+        if (btnNovedad) btnNovedad.disabled = !this.opActiva || !this.operarioId;
         if (btnFinalizar) btnFinalizar.disabled = true;
         break;
     }
@@ -473,7 +542,10 @@ const SmartOpsState = {
       tiempoInicio: this.tiempoInicio,
       tiempoTranscurridoSegundos: this.tiempoTranscurridoSegundos,
       novedadActiva: this.novedadActiva,
-      motivoPausa: this.motivoPausa
+      motivoPausa: this.motivoPausa,
+      tiempoInicioPausa: this.tiempoInicioPausa,
+      tiempoPausaAcumuladoSegundos: this.tiempoPausaAcumuladoSegundos,
+      sesionesActivas: this.state.sesionesActivas
     });
   },
 
@@ -485,6 +557,12 @@ const SmartOpsState = {
     this.tiempoTranscurridoSegundos = sesion.tiempoTranscurridoSegundos || 0;
     this.novedadActiva = sesion.novedadActiva;
     this.motivoPausa = sesion.motivoPausa;
+    this.tiempoInicioPausa = sesion.tiempoInicioPausa || null;
+    this.tiempoPausaAcumuladoSegundos = sesion.tiempoPausaAcumuladoSegundos || 0;
+    
+    if (sesion.sesionesActivas) {
+      this.state.sesionesActivas = sesion.sesionesActivas;
+    }
 
     const ctSelect = document.getElementById('select-ct');
     const operarioSelect = document.getElementById('select-operario');

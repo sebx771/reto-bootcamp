@@ -113,12 +113,14 @@ const SmartOpsModels = {
   /**
    * Payload para inicio o reanudación de producción
    * @param {Object} contexto
-   * @param {{ esReanudacion: boolean, tiempoAcumuladoPrevioSegundos: number }} extras
+   * @param {{ esReanudacion: boolean, tiempoAcumuladoPrevioSegundos: number, duracionInterrupcionSegundos?: number }} extras
    */
   inicioProduccion(contexto, extras) {
     return this.eventoPayload('INICIO_PRODUCCION', contexto, {
       esReanudacion: extras.esReanudacion || false,
-      tiempoAcumuladoPrevioSegundos: extras.tiempoAcumuladoPrevioSegundos || 0
+      tiempoAcumuladoPrevioSegundos: extras.tiempoAcumuladoPrevioSegundos || 0,
+      duracionInterrupcionSegundos: extras.duracionInterrupcionSegundos || 0,
+      duracionMinutos: Math.round((extras.duracionInterrupcionSegundos || 0) / 60 * 10) / 10
     });
   },
 
@@ -152,12 +154,13 @@ const SmartOpsModels = {
   /**
    * Payload para cierre de orden de producción
    * @param {Object} contexto
-   * @param {{ duracionMinutos: number, tiempoTotalFormato: string, novedadesRegistradas: Array }} extras
+   * @param {{ duracionMinutos: number, tiempoTotalFormato: string, novedadesRegistradas: Array, tiempoPausaAcumuladoSegundos?: number }} extras
    */
   cierreOP(contexto, extras) {
     return this.eventoPayload('CIERRE_OP', contexto, {
       duracionMinutos: extras.duracionMinutos || 0,
       tiempoTotalFormato: extras.tiempoTotalFormato || '00:00:00',
+      tiempoPausaAcumuladoSegundos: extras.tiempoPausaAcumuladoSegundos || 0,
       novedadesRegistradas: extras.novedadesRegistradas || []
     });
   }
