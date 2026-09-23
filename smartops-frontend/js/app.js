@@ -357,7 +357,15 @@ const SmartOpsApp = {
       const btnAplicar = document.getElementById('btn-aplicar-ia');
       if (btnAplicar) {
         btnAplicar.onclick = () => {
-          SmartOpsState.reportarNovedad(res.categoriaId, `[Asistido IA]: ${texto}`, 'IA-CLASIFICADO');
+          // CRÍTICO: NO pasamos res.categoriaId como categoría directa.
+          // Si lo pasáramos, el backend lo recibiría como `categoriaDirecta` y
+          // nunca invocaría a Gemini, dejando `causaIA` vacía en Sheets.
+          //
+          // En cambio, guardamos el texto PURO como `detalleCausa` del estado
+          // y dejamos categoriaId = null. Cuando el operario reanude, el payload
+          // que se envía al backend NO tendrá `categoriaDirecta`, y la condición
+          // (!categoriaFinal && textoNovedad) del Registro.gs disparará la IA.
+          SmartOpsState.reportarNovedad(null, texto, 'IA-TEXTO-LIBRE');
           this.cerrarModal('modal-ia');
           input.value = '';
           resultadoContainer?.classList.add('hidden');

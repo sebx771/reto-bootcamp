@@ -199,10 +199,14 @@ const SmartOpsState = {
          });
          SmartOpsAPI.enviarEvento(payload);
       } else if (this.estadoActual === SmartOpsConfig.ESTADOS.PARO) {
+         // categoriaId: null cuando viene del flujo IA (texto libre).
+         // models.js paroNovedad() omitirá el campo categoriaDirecta del payload
+         // → el backend invocará Gemini y llenará categoria + causaIA en Sheets.
+         // Si viene de botón directo, categoriaId tendrá valor y se traduce normalmente.
          const payload = this.crearPayload('PARO_NOVEDAD', {
-           categoriaDirecta: this.novedadActiva?.categoriaId,
+           categoriaId: this.novedadActiva?.categoriaId || null,
            codigoCausa: this.novedadActiva?.codigoCausa,
-           textoNovedad: this.novedadActiva?.detalleCausa,
+           textoNovedad: this.novedadActiva?.detalleCausa || '',
            duracionMinutos: duracionMinutos
          });
          SmartOpsAPI.enviarEvento(payload);
@@ -357,9 +361,10 @@ const SmartOpsState = {
       case 'PAUSA_LABOR':
         return SmartOpsModels.pausaLabor(contexto, dataAdicional);
       case 'PARO_NOVEDAD':
-        // dataAdicional trae categoriaDirecta (ID interno) → models lo traduce
+        // categoriaId viene de state.js (null si es flujo IA texto libre, o ID interno si es botón directo).
+        // paroNovedad() en models.js sólo incluirá `categoriaDirecta` en el payload si categoriaId tiene valor.
         return SmartOpsModels.paroNovedad(contexto, {
-          categoriaId: dataAdicional.categoriaDirecta,
+          categoriaId: dataAdicional.categoriaId ?? dataAdicional.categoriaDirecta ?? null,
           codigoCausa: dataAdicional.codigoCausa,
           textoNovedad: dataAdicional.textoNovedad,
           duracionMinutos: dataAdicional.duracionMinutos

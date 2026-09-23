@@ -1,7 +1,7 @@
 // SmartOps SuperBrix - Service Worker v1.1.0
 // Proporciona soporte offline completo para el App Shell industrial
 
-const CACHE_NAME = 'smartops-shell-v1.1.0';
+const CACHE_NAME = 'smartops-shell-v1.2.0';
 
 // Recursos locales estáticos esenciales para el arranque offline
 const ASSETS_TO_CACHE = [
@@ -11,6 +11,7 @@ const ASSETS_TO_CACHE = [
   './css/styles.css',
   './js/config.js',
   './js/storage.js',
+  './js/models.js',
   './js/api.js',
   './js/state.js',
   './js/scanner.js',

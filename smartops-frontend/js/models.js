@@ -67,10 +67,16 @@ const SmartOpsModels = {
    * @returns {Object} Payload listo para enviar al backend
    */
   eventoPayload(tipoEvento, contexto, extras = {}) {
-    // Si viene categoriaDirecta con ID interno, traducirla al nombre oficial
+    // Si viene categoriaDirecta con ID interno, traducirla al nombre oficial.
+    // Si está vacía o es null, se excluye del payload para que el backend
+    // detecte que debe invocar la IA (condición !categoriaFinal).
     const categoriaTraducida = extras.categoriaDirecta
       ? this.traducirCategoria(extras.categoriaDirecta)
       : undefined;
+
+    // Extraer categoriaDirecta de extras para manejarla separadamente.
+    // Así evitamos que el spread incluya categoriaDirecta: "" en el payload.
+    const { categoriaDirecta: _ignorada, ...extrasRestantes } = extras;
 
     const payload = {
       // Metadatos del formato
@@ -95,10 +101,11 @@ const SmartOpsModels = {
       // Centro de trabajo seleccionado en la UI
       ctOperacion: contexto.ctOperacion || 'SIN_CT_OP',
 
-      // Campos extra del evento
-      ...extras,
+      // Campos extra del evento (sin categoriaDirecta, se añade abajo sólo si tiene valor)
+      ...extrasRestantes,
 
-      // Sobrescribir categoriaDirecta con la versión traducida (si aplica)
+      // Incluir categoriaDirecta SÓLO si tiene valor (traducido al nombre oficial).
+      // Si es undefined, el campo no existe en el payload → el backend invocará la IA.
       ...(categoriaTraducida !== undefined && { categoriaDirecta: categoriaTraducida })
     };
 
@@ -143,12 +150,18 @@ const SmartOpsModels = {
    * @param {{ categoriaId: string, codigoCausa: string, textoNovedad: string, duracionMinutos: number }} extras
    */
   paroNovedad(contexto, extras) {
-    return this.eventoPayload('PARO_NOVEDAD', contexto, {
-      categoriaDirecta: extras.categoriaId || '',   // ← se traduce dentro de eventoPayload
+    // IMPORTANTE: sólo incluir categoriaDirecta si realmente tiene valor.
+    // Si categoriaId está vacío/null (flujo "Otros"/IA), se omite el campo
+    // para que el backend detecte que debe clasificar con Gemini.
+    const extrasNovedad = {
       codigoCausa: extras.codigoCausa || 'NOV-GEN',
       textoNovedad: extras.textoNovedad || '',
       duracionMinutos: extras.duracionMinutos || 0
-    });
+    };
+    if (extras.categoriaId) {
+      extrasNovedad.categoriaDirecta = extras.categoriaId; // se traduce dentro de eventoPayload
+    }
+    return this.eventoPayload('PARO_NOVEDAD', contexto, extrasNovedad);
   },
 
   /**
