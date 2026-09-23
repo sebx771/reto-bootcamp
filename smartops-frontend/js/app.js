@@ -38,8 +38,8 @@ const SmartOpsApp = {
     // 6. Monitorear estado de conexión de red
     this.configurarMonitoreoRed();
 
-    // 7. Renderizar botones demo en el scanner
-    SmartOpsScanner.renderizarBotonesDemo();
+    // 7. Renderizar botones demo (Eliminado)
+    // SmartOpsScanner.renderizarBotonesDemo();
 
     // 8. Renderizar matriz de 6 causas en el modal de reporte rápido
     this.renderizarMatrizCausasRapidas();

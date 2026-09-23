@@ -14,6 +14,10 @@ const ASSETS_TO_CACHE = [
   './js/api.js',
   './js/state.js',
   './js/scanner.js',
+  './js/ui.js',
+  './js/ui/timer.js',
+  './js/ui/toasts.js',
+  './js/ui/modals.js',
   './js/app.js'
 ];
 
