@@ -77,11 +77,14 @@ const SmartOpsScanner = {
     }
   },
 
+  _procesandoScan: false,
+
   /**
    * Callback al decodificar QR: extrae cédula del carné del operario
    */
-  onScanExitoso(decodedText) {
-    if (!decodedText) return;
+  async onScanExitoso(decodedText) {
+    if (!decodedText || this._procesandoScan) return;
+    this._procesandoScan = true;
 
     // Intentar parsear JSON del carné { cedula, nombre, ct } o usar el texto directamente
     let cedula = decodedText.trim();
@@ -89,15 +92,31 @@ const SmartOpsScanner = {
       const parsed = JSON.parse(cedula);
       cedula = String(parsed.cedula || parsed.id || parsed.operarioId || cedula);
     } catch (e) {}
-    cedula = cedula.replace(/\D/g, '') || cedula;
+    
+    // Dejar solo los números de la cadena leída (limpiando caracteres invisibles o basura)
+    cedula = cedula.replace(/\D/g, '');
+
+    // Validar tamaño mínimo de la cédula
+    if (!cedula || cedula.length < 5) {
+      console.warn('[Scanner] Código inválido o ilegible:', decodedText);
+      if (window.SmartOpsAPI && window.SmartOpsAPI.mostrarNotificacion) {
+        window.SmartOpsAPI.mostrarNotificacion(`QR leído pero ignorado: "${decodedText}". No contiene una cédula válida.`, 'warning');
+      }
+      this._procesandoScan = false;
+      return;
+    }
 
     if (window.SmartOpsApp) {
       window.SmartOpsApp.darFeedbackTactil();
       window.SmartOpsApp.emitirBeepIndustrial(880, 0.1);
     }
 
-    this.detenerEscaner();
-    this._identificarOperarioPorCedula(cedula);
+    await this.detenerEscaner();
+    
+    // Llamar al endpoint
+    await this._identificarOperarioPorCedula(cedula);
+    
+    this._procesandoScan = false;
   },
 
   /**
