@@ -4,27 +4,63 @@
  */
 
 const SmartOpsState = {
-  // Variables reactivas de estado
-  estadoActual: SmartOpsConfig.ESTADOS.INACTIVO,
-  opActiva: null,
-  ctActual: 'CT-TORNO-01',
-  operarioActual: 'Carlos Mendoza',
-  
-  // Tiempos
-  tiempoInicio: null,
-  tiempoTranscurridoSegundos: 0,
-  timerInterval: null,
-  ultimoTimestampSegmento: null,
-  
-  // Novedad activa si está en PARO
-  novedadActiva: null,
-  motivoPausa: null,
+  state: {
+    estadoActual: SmartOpsConfig.ESTADOS.INACTIVO,
+    opActiva: null,
+    ctActual: 'CT-TORNO-01',
+    operarioActual: 'Carlos Mendoza',
+    tiempoInicio: null,
+    tiempoTranscurridoSegundos: 0,
+    timerInterval: null,
+    ultimoTimestampSegmento: null,
+    novedadActiva: null,
+    motivoPausa: null
+  },
+
+  listeners: [],
+
+  subscribe(fn) {
+    this.listeners.push(fn);
+  },
+
+  getSnapshot() {
+    return { ...this.state };
+  },
+
+  notify() {
+    this.listeners.forEach((fn) => fn(this.getSnapshot()));
+  },
+
+  setState(patch) {
+    this.state = { ...this.state, ...patch };
+    this.notify();
+  },
+
+  get estadoActual() { return this.state.estadoActual; },
+  set estadoActual(value) { this.state.estadoActual = value; },
+  get opActiva() { return this.state.opActiva; },
+  set opActiva(value) { this.state.opActiva = value; },
+  get ctActual() { return this.state.ctActual; },
+  set ctActual(value) { this.state.ctActual = value; },
+  get operarioActual() { return this.state.operarioActual; },
+  set operarioActual(value) { this.state.operarioActual = value; },
+  get tiempoInicio() { return this.state.tiempoInicio; },
+  set tiempoInicio(value) { this.state.tiempoInicio = value; },
+  get tiempoTranscurridoSegundos() { return this.state.tiempoTranscurridoSegundos; },
+  set tiempoTranscurridoSegundos(value) { this.state.tiempoTranscurridoSegundos = value; },
+  get timerInterval() { return this.state.timerInterval; },
+  set timerInterval(value) { this.state.timerInterval = value; },
+  get ultimoTimestampSegmento() { return this.state.ultimoTimestampSegmento; },
+  set ultimoTimestampSegmento(value) { this.state.ultimoTimestampSegmento = value; },
+  get novedadActiva() { return this.state.novedadActiva; },
+  set novedadActiva(value) { this.state.novedadActiva = value; },
+  get motivoPausa() { return this.state.motivoPausa; },
+  set motivoPausa(value) { this.state.motivoPausa = value; },
 
   /**
    * Inicializa la máquina de estados y recupera sesión previa si existe
    */
   init() {
-    // Escuchar cambios en los selectores de CT y Operario
     const ctSelect = document.getElementById('select-ct');
     const operarioSelect = document.getElementById('select-operario');
 
@@ -33,6 +69,7 @@ const SmartOpsState = {
       ctSelect.addEventListener('change', (e) => {
         this.ctActual = e.target.value;
         this.guardarSesion();
+        this.notify();
       });
     }
 
@@ -41,10 +78,10 @@ const SmartOpsState = {
       operarioSelect.addEventListener('change', (e) => {
         this.operarioActual = e.target.value;
         this.guardarSesion();
+        this.notify();
       });
     }
 
-    // Intentar restaurar sesión activa de localStorage
     const sesion = SmartOpsStorage.cargarEstadoSesion();
     if (sesion && sesion.opActiva) {
       this.restaurarSesion(sesion);
@@ -65,20 +102,9 @@ const SmartOpsState = {
       this.opActiva = op;
     }
 
-    // Actualizar visualmente la tarjeta de OP
-    const opCodigoEl = document.getElementById('op-codigo-display');
-    const opDescEl = document.getElementById('op-descripcion-display');
-    const opPlanoEl = document.getElementById('op-plano-badge');
-
-    if (opCodigoEl) opCodigoEl.textContent = this.opActiva.codigo;
-    if (opDescEl) opDescEl.textContent = this.opActiva.descripcion;
-    if (opPlanoEl && this.opActiva.plano) {
-      opPlanoEl.textContent = this.opActiva.plano;
-      opPlanoEl.classList.remove('hidden');
-    }
-
     this.actualizarUI();
     this.guardarSesion();
+    this.notify();
     SmartOpsAPI.mostrarNotificacion(`OP ${this.opActiva.codigo} seleccionada correctamente.`, 'info');
   },
 
@@ -93,8 +119,8 @@ const SmartOpsState = {
     }
 
     const ahora = new Date();
-    const esReanudacion = this.estadoActual === SmartOpsConfig.ESTADOS.PAUSA || 
-                          this.estadoActual === SmartOpsConfig.ESTADOS.PARO;
+    const esReanudacion = this.estadoActual === SmartOpsConfig.ESTADOS.PAUSA ||
+      this.estadoActual === SmartOpsConfig.ESTADOS.PARO;
 
     if (!esReanudacion) {
       this.tiempoInicio = ahora.toISOString();
@@ -106,10 +132,8 @@ const SmartOpsState = {
     this.motivoPausa = null;
     this.ultimoTimestampSegmento = ahora.getTime();
 
-    // Arrancar el cronómetro
     this.iniciarTicker();
 
-    // Empaquetar y despachar payload industrial FO-A-MA-01
     const payload = this.crearPayload('INICIO_PRODUCCION', {
       esReanudacion,
       tiempoAcumuladoPrevioSegundos: this.tiempoTranscurridoSegundos
@@ -118,6 +142,7 @@ const SmartOpsState = {
 
     this.actualizarUI();
     this.guardarSesion();
+    this.notify();
   },
 
   /**
@@ -142,6 +167,7 @@ const SmartOpsState = {
 
     this.actualizarUI();
     this.guardarSesion();
+    this.notify();
     SmartOpsAPI.mostrarNotificacion(`Labor en Pausa: ${motivo}`, 'info');
   },
 
@@ -177,6 +203,7 @@ const SmartOpsState = {
 
     this.actualizarUI();
     this.guardarSesion();
+    this.notify();
     SmartOpsAPI.mostrarNotificacion(`PARO REGISTRADO: [${categoriaId}] ${detalleCausa}`, 'error');
   },
 
@@ -203,17 +230,14 @@ const SmartOpsState = {
     const duracionFinalSegundos = this.tiempoTranscurridoSegundos;
     const duracionFormateada = this.formatearTiempo(duracionFinalSegundos);
 
-    // Payload de cierre
     const payload = this.crearPayload('CIERRE_OP', {
       tiempoTotalProduccionSegundos: duracionFinalSegundos,
       tiempoTotalFormato: duracionFormateada,
       novedadesRegistradas: this.novedadActiva ? [this.novedadActiva] : []
     });
     SmartOpsAPI.enviarEvento(payload);
-
     SmartOpsAPI.mostrarNotificacion(`OP ${this.opActiva.codigo} FINALIZADA (${duracionFormateada})`, 'success');
 
-    // Reset de estado
     this.estadoActual = SmartOpsConfig.ESTADOS.INACTIVO;
     this.opActiva = null;
     this.tiempoInicio = null;
@@ -222,17 +246,9 @@ const SmartOpsState = {
     this.motivoPausa = null;
 
     SmartOpsStorage.limpiarEstadoSesion();
-
-    // Reset visual de tarjeta de OP
-    const opCodigoEl = document.getElementById('op-codigo-display');
-    const opDescEl = document.getElementById('op-descripcion-display');
-    const opPlanoEl = document.getElementById('op-plano-badge');
-    if (opCodigoEl) opCodigoEl.textContent = 'SIN OP ASIGNADA';
-    if (opDescEl) opDescEl.textContent = 'Escanee el código de barras o seleccione una orden de prueba.';
-    if (opPlanoEl) opPlanoEl.classList.add('hidden');
-
     this.actualizarTimerDisplay(0);
     this.actualizarUI();
+    this.notify();
   },
 
   /**
@@ -258,13 +274,15 @@ const SmartOpsState = {
    */
   iniciarTicker() {
     this.detenerTicker();
+    this.ultimoTimestampSegmento = Date.now();
     this.timerInterval = setInterval(() => {
-      this.tiempoTranscurridoSegundos++;
-      this.actualizarTimerDisplay(this.tiempoTranscurridoSegundos);
-      
-      // Persistir cada 15 segundos para no perder conteo
-      if (this.tiempoTranscurridoSegundos % 15 === 0) {
-        this.guardarSesion();
+      const ahora = Date.now();
+      const delta = Math.floor((ahora - this.ultimoTimestampSegmento) / 1000);
+      if (delta > 0) {
+        this.tiempoTranscurridoSegundos += delta;
+        this.ultimoTimestampSegmento = ahora;
+        this.actualizarTimerDisplay(this.tiempoTranscurridoSegundos);
+        this.notify();
       }
     }, 1000);
   },
@@ -291,6 +309,11 @@ const SmartOpsState = {
   },
 
   actualizarTimerDisplay(segundos) {
+    if (window.SmartOpsTimer && typeof window.SmartOpsTimer.actualizarTimerDisplay === 'function') {
+      window.SmartOpsTimer.actualizarTimerDisplay(segundos);
+      return;
+    }
+
     const timerDisplay = document.getElementById('cronometro-display');
     if (timerDisplay) {
       timerDisplay.textContent = this.formatearTiempo(segundos);
@@ -301,19 +324,22 @@ const SmartOpsState = {
    * Actualiza el árbol DOM reflejando el estado operativo
    */
   actualizarUI() {
+    if (window.SmartOpsUI && typeof window.SmartOpsUI.render === 'function') {
+      window.SmartOpsUI.render(this.getSnapshot());
+      return;
+    }
+
     const statusTextEl = document.getElementById('status-text');
     const beaconEl = document.getElementById('status-beacon');
     const timerBox = document.getElementById('timer-box');
     const novedadBanner = document.getElementById('novedad-alert-banner');
     const novedadText = document.getElementById('novedad-banner-text');
 
-    // Botones de la matriz 2x2
     const btnIniciar = document.getElementById('btn-iniciar');
     const btnPausar = document.getElementById('btn-pausar');
     const btnNovedad = document.getElementById('btn-novedad');
     const btnFinalizar = document.getElementById('btn-finalizar');
 
-    // Resetear baliza
     if (beaconEl) {
       beaconEl.className = 'beacon-dot';
     }
@@ -322,7 +348,6 @@ const SmartOpsState = {
       statusTextEl.textContent = this.estadoActual;
     }
 
-    // Gestionar estados y estilos
     switch (this.estadoActual) {
       case SmartOpsConfig.ESTADOS.PRODUCCION:
         if (beaconEl) beaconEl.classList.add('beacon-producing');
@@ -331,7 +356,6 @@ const SmartOpsState = {
           timerBox.style.boxShadow = '0 8px 24px -4px rgba(16, 185, 129, 0.25), 0 2px 8px rgba(0, 0, 0, 0.04)';
         }
         if (novedadBanner) novedadBanner.classList.add('hidden');
-        
         if (btnIniciar) {
           btnIniciar.disabled = true;
           btnIniciar.innerHTML = '<i data-lucide="play-circle" class="w-7 h-7"></i><span>PRODUCIENDO...</span>';
@@ -383,14 +407,13 @@ const SmartOpsState = {
         if (btnFinalizar) btnFinalizar.disabled = false;
         break;
 
-      default: // INACTIVO
+      default:
         if (beaconEl) beaconEl.classList.add('beacon-idle');
         if (timerBox) {
           timerBox.style.borderColor = '#EAE1DA';
           timerBox.style.boxShadow = '0 4px 20px -4px rgba(249, 115, 22, 0.08), 0 2px 8px rgba(120, 113, 108, 0.04)';
         }
         if (novedadBanner) novedadBanner.classList.add('hidden');
-        
         if (btnIniciar) {
           btnIniciar.disabled = !this.opActiva;
           btnIniciar.innerHTML = '<i data-lucide="play-circle" class="w-7 h-7"></i><span>INICIAR LABOR</span>';
@@ -428,7 +451,6 @@ const SmartOpsState = {
     this.novedadActiva = sesion.novedadActiva;
     this.motivoPausa = sesion.motivoPausa;
 
-    // Sincronizar selectores del DOM
     const ctSelect = document.getElementById('select-ct');
     const operarioSelect = document.getElementById('select-operario');
     if (ctSelect) ctSelect.value = this.ctActual;
@@ -440,7 +462,6 @@ const SmartOpsState = {
 
     this.actualizarTimerDisplay(this.tiempoTranscurridoSegundos);
 
-    // Si estaba produciendo, reanudar ticker
     if (this.estadoActual === SmartOpsConfig.ESTADOS.PRODUCCION) {
       this.iniciarTicker();
     }

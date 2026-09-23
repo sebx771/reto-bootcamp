@@ -201,6 +201,11 @@ const SmartOpsAPI = {
    * @param {'success'|'warning'|'error'|'info'} tipo
    */
   mostrarNotificacion(mensaje, tipo = 'info') {
+    if (window.SmartOpsToasts && typeof window.SmartOpsToasts.mostrarNotificacion === 'function') {
+      window.SmartOpsToasts.mostrarNotificacion(mensaje, tipo);
+      return;
+    }
+
     const container = document.getElementById('toast-container');
     if (!container) return;
 

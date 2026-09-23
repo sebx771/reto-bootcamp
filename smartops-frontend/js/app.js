@@ -23,10 +23,15 @@ const SmartOpsApp = {
     // 3. Inicializar selectores del Header
     this.inicializarSelectoresHeader();
 
-    // 4. Inicializar la máquina de estados y recuperar sesión
+    // 4. Suscribirse al estado para renderizar la UI de forma modular
+    SmartOpsState.subscribe((snapshot) => {
+      SmartOpsUI.render(snapshot);
+    });
+
+    // 5. Inicializar la máquina de estados y recuperar sesión
     SmartOpsState.init();
 
-    // 5. Enlazar eventos de botones masivos y modales
+    // 6. Enlazar eventos de botones masivos y modales
     this.enlazarEventosBotones();
     this.enlazarEventosModales();
 
@@ -328,17 +333,29 @@ const SmartOpsApp = {
     actualizarIndicador();
   },
 
-  // Manejo de Modales
+  // Manejo de Modales (delegado a ui/modals.js)
   abrirModalNovedad() {
+    if (window.SmartOpsModals && typeof window.SmartOpsModals.abrirModalNovedad === 'function') {
+      return window.SmartOpsModals.abrirModalNovedad();
+    }
     document.getElementById('modal-novedades')?.classList.remove('hidden');
   },
   abrirModalIA() {
+    if (window.SmartOpsModals && typeof window.SmartOpsModals.abrirModalIA === 'function') {
+      return window.SmartOpsModals.abrirModalIA();
+    }
     document.getElementById('modal-ia')?.classList.remove('hidden');
   },
   abrirModalPausa() {
+    if (window.SmartOpsModals && typeof window.SmartOpsModals.abrirModalPausa === 'function') {
+      return window.SmartOpsModals.abrirModalPausa();
+    }
     document.getElementById('modal-pausa')?.classList.remove('hidden');
   },
   abrirModalFinalizar() {
+    if (window.SmartOpsModals && typeof window.SmartOpsModals.abrirModalFinalizar === 'function') {
+      return window.SmartOpsModals.abrirModalFinalizar();
+    }
     const resTiempo = document.getElementById('resumen-tiempo-final');
     if (resTiempo) {
       resTiempo.textContent = SmartOpsState.formatearTiempo(SmartOpsState.tiempoTranscurridoSegundos);
@@ -346,18 +363,31 @@ const SmartOpsApp = {
     document.getElementById('modal-finalizar')?.classList.remove('hidden');
   },
   abrirModalColaHistorial() {
+    if (window.SmartOpsModals && typeof window.SmartOpsModals.abrirModalColaHistorial === 'function') {
+      return window.SmartOpsModals.abrirModalColaHistorial();
+    }
     this.renderizarDetalleCola();
     document.getElementById('modal-historial')?.classList.remove('hidden');
   },
   cerrarModal(modalId) {
+    if (window.SmartOpsModals && typeof window.SmartOpsModals.cerrarModal === 'function') {
+      return window.SmartOpsModals.cerrarModal(modalId);
+    }
     document.getElementById(modalId)?.classList.add('hidden');
   },
   cerrarTodosLosModales() {
+    if (window.SmartOpsModals && typeof window.SmartOpsModals.cerrarTodosLosModales === 'function') {
+      return window.SmartOpsModals.cerrarTodosLosModales();
+    }
     document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.add('hidden'));
     SmartOpsScanner.detenerEscaner();
   },
 
   renderizarDetalleCola() {
+    if (window.SmartOpsModals && typeof window.SmartOpsModals.renderizarDetalleCola === 'function') {
+      return window.SmartOpsModals.renderizarDetalleCola();
+    }
+
     const colaList = document.getElementById('historial-cola-items');
     if (!colaList) return;
 
