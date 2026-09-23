@@ -254,10 +254,11 @@ const SmartOpsAPI = {
       };
 
     } catch (err) {
-      console.error('[API] Error al verificar operario:', err.message);
+      console.error('[API] Error al verificar operario:', err);
+      let motivo = err.name === 'AbortError' ? 'Tiempo de espera agotado (Timeout).' : err.message;
       return {
         success: false,
-        mensaje: 'Error de conexión al verificar operario.'
+        mensaje: `Error de conexión: ${motivo}`
       };
     }
   },

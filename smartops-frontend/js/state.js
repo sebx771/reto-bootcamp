@@ -189,6 +189,24 @@ const SmartOpsState = {
     if (esReanudacion && this.tiempoInicioPausa) {
       duracionInterrupcionSegundos = Math.floor((ahora.getTime() - this.tiempoInicioPausa) / 1000);
       this.tiempoPausaAcumuladoSegundos += duracionInterrupcionSegundos;
+      
+      const duracionMinutos = Math.round((duracionInterrupcionSegundos / 60) * 10) / 10;
+      
+      if (this.estadoActual === SmartOpsConfig.ESTADOS.PAUSA) {
+         const payload = this.crearPayload('PAUSA_LABOR', {
+           motivoPausa: this.motivoPausa,
+           duracionMinutos: duracionMinutos
+         });
+         SmartOpsAPI.enviarEvento(payload);
+      } else if (this.estadoActual === SmartOpsConfig.ESTADOS.PARO) {
+         const payload = this.crearPayload('PARO_NOVEDAD', {
+           categoriaDirecta: this.novedadActiva?.categoriaId,
+           codigoCausa: this.novedadActiva?.codigoCausa,
+           textoNovedad: this.novedadActiva?.detalleCausa,
+           duracionMinutos: duracionMinutos
+         });
+         SmartOpsAPI.enviarEvento(payload);
+      }
     }
 
     if (!esReanudacion) {
@@ -226,18 +244,9 @@ const SmartOpsState = {
       return;
     }
 
-    this.detenerTicker();
     this.estadoActual = SmartOpsConfig.ESTADOS.PAUSA;
     this.motivoPausa = motivo;
     this.tiempoInicioPausa = Date.now();
-
-    const payload = this.crearPayload('PAUSA_LABOR', {
-      motivoPausa: motivo,
-      tiempoProduccionSegundos: this.tiempoTranscurridoSegundos,
-      tiempoProduccionFormato: this.formatearTiempo(this.tiempoTranscurridoSegundos),
-      duracionMinutos: Math.round((this.tiempoTranscurridoSegundos / 60) * 10) / 10
-    });
-    SmartOpsAPI.enviarEvento(payload);
 
     this.actualizarUI();
     this.guardarSesion();
@@ -257,7 +266,6 @@ const SmartOpsState = {
       return;
     }
 
-    this.detenerTicker();
     this.estadoActual = SmartOpsConfig.ESTADOS.PARO;
     this.tiempoInicioPausa = Date.now();
     this.novedadActiva = {
@@ -266,16 +274,6 @@ const SmartOpsState = {
       detalleCausa,
       horaInicioParo: new Date().toISOString()
     };
-
-    const payload = this.crearPayload('PARO_NOVEDAD', {
-      categoriaDirecta: categoriaId,
-      codigoCausa: codigoCausa,
-      textoNovedad: detalleCausa,
-      tiempoProduccionSegundos: this.tiempoTranscurridoSegundos,
-      tiempoProduccionFormato: this.formatearTiempo(this.tiempoTranscurridoSegundos),
-      duracionMinutos: Math.round((this.tiempoTranscurridoSegundos / 60) * 10) / 10
-    });
-    SmartOpsAPI.enviarEvento(payload);
 
     this.actualizarUI();
     this.guardarSesion();
@@ -383,12 +381,27 @@ const SmartOpsState = {
       const ahora = Date.now();
       const delta = Math.floor((ahora - this.ultimoTimestampSegmento) / 1000);
       if (delta > 0) {
-        this.tiempoTranscurridoSegundos += delta;
         this.ultimoTimestampSegmento = ahora;
-        this.actualizarTimerDisplay(this.tiempoTranscurridoSegundos);
-        this.notify();
+        
+        if (this.estadoActual === SmartOpsConfig.ESTADOS.PRODUCCION) {
+          this.tiempoTranscurridoSegundos += delta;
+          this.actualizarTimerDisplay(this.tiempoTranscurridoSegundos);
+        } else if (this.estadoActual === SmartOpsConfig.ESTADOS.PAUSA || this.estadoActual === SmartOpsConfig.ESTADOS.PARO) {
+          if (this.tiempoInicioPausa) {
+            const pausaSegundos = Math.floor((ahora - this.tiempoInicioPausa) / 1000);
+            this.actualizarPausaDisplay(pausaSegundos);
+          }
+        }
       }
     }, 1000);
+  },
+
+  actualizarPausaDisplay(segundos) {
+    const timeFormatted = this.formatearTiempo(segundos);
+    const counterSpan = document.getElementById('pausa-cronometro-display');
+    if (counterSpan) {
+       counterSpan.textContent = timeFormatted;
+    }
   },
 
   detenerTicker() {
@@ -477,8 +490,8 @@ const SmartOpsState = {
         }
         if (novedadBanner) {
           novedadBanner.classList.remove('hidden');
-          novedadBanner.className = 'bg-[#FFFBEB] border border-[#FDE68A] text-[#92400E] rounded-2xl p-3 flex items-center gap-3 mb-3 shadow-sm';
-          if (novedadText) novedadText.innerHTML = `<strong>PAUSA ACTIVA:</strong> ${this.motivoPausa || 'Labor suspendida temporalmente'}`;
+          novedadBanner.className = 'bg-[#FFFBEB] border border-[#FDE68A] text-[#92400E] rounded-2xl p-3 flex flex-col justify-center gap-1 mb-3 shadow-sm text-center';
+          if (novedadText) novedadText.innerHTML = `<div class="text-xs"><strong>PAUSA ACTIVA:</strong> ${this.motivoPausa || 'Labor suspendida temporalmente'}</div><div id="pausa-cronometro-display" class="font-mono font-black text-3xl mt-1 text-[#D97706]">00:00:00</div>`;
         }
         if (btnIniciar) {
           btnIniciar.disabled = false;
@@ -497,9 +510,9 @@ const SmartOpsState = {
         }
         if (novedadBanner) {
           novedadBanner.classList.remove('hidden');
-          novedadBanner.className = 'bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] rounded-2xl p-3 flex items-center gap-3 mb-3 shadow-sm animate-pulse';
+          novedadBanner.className = 'bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] rounded-2xl p-3 flex flex-col justify-center gap-1 mb-3 shadow-sm animate-pulse text-center';
           if (novedadText) {
-            novedadText.innerHTML = `<strong>PARO [${this.novedadActiva?.categoriaId || 'NOVEDAD'}]:</strong> ${this.novedadActiva?.detalleCausa || 'Máquina detenida'}`;
+            novedadText.innerHTML = `<div class="text-xs"><strong>PARO [${this.novedadActiva?.categoriaId || 'NOVEDAD'}]:</strong> ${this.novedadActiva?.detalleCausa || 'Máquina detenida'}</div><div id="pausa-cronometro-display" class="font-mono font-black text-3xl mt-1 text-[#DC2626]">00:00:00</div>`;
           }
         }
         if (btnIniciar) {
@@ -575,7 +588,7 @@ const SmartOpsState = {
 
     this.actualizarTimerDisplay(this.tiempoTranscurridoSegundos);
 
-    if (this.estadoActual === SmartOpsConfig.ESTADOS.PRODUCCION) {
+    if (this.estadoActual === SmartOpsConfig.ESTADOS.PRODUCCION || this.estadoActual === SmartOpsConfig.ESTADOS.PAUSA || this.estadoActual === SmartOpsConfig.ESTADOS.PARO) {
       this.iniciarTicker();
     }
 

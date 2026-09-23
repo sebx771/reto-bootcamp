@@ -74,8 +74,8 @@ const SmartOpsUI = {
         }
         if (novedadBanner) {
           novedadBanner.classList.remove('hidden');
-          novedadBanner.className = 'bg-[#FFFBEB] border border-[#FDE68A] text-[#92400E] rounded-2xl p-3 flex items-center gap-3 mb-3 shadow-sm';
-          if (novedadText) novedadText.innerHTML = `<strong>PAUSA ACTIVA:</strong> ${snapshot.motivoPausa || 'Labor suspendida temporalmente'}`;
+          novedadBanner.className = 'bg-[#FFFBEB] border border-[#FDE68A] text-[#92400E] rounded-2xl p-3 flex flex-col justify-center gap-1 mb-3 shadow-sm text-center';
+          if (novedadText) novedadText.innerHTML = `<div class="text-xs"><strong>PAUSA ACTIVA:</strong> ${snapshot.motivoPausa || 'Labor suspendida temporalmente'}</div><div id="pausa-cronometro-display" class="font-mono font-black text-3xl mt-1 text-[#D97706]">00:00:00</div>`;
         }
         if (btnIniciar) {
           btnIniciar.disabled = false;
@@ -94,9 +94,9 @@ const SmartOpsUI = {
         }
         if (novedadBanner) {
           novedadBanner.classList.remove('hidden');
-          novedadBanner.className = 'bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] rounded-2xl p-3 flex items-center gap-3 mb-3 shadow-sm animate-pulse';
+          novedadBanner.className = 'bg-[#FEF2F2] border border-[#FECACA] text-[#991B1B] rounded-2xl p-3 flex flex-col justify-center gap-1 mb-3 shadow-sm animate-pulse text-center';
           if (novedadText) {
-            novedadText.innerHTML = `<strong>PARO [${snapshot.novedadActiva?.categoriaId || 'NOVEDAD'}]:</strong> ${snapshot.novedadActiva?.detalleCausa || 'Máquina detenida'}`;
+            novedadText.innerHTML = `<div class="text-xs"><strong>PARO [${snapshot.novedadActiva?.categoriaId || 'NOVEDAD'}]:</strong> ${snapshot.novedadActiva?.detalleCausa || 'Máquina detenida'}</div><div id="pausa-cronometro-display" class="font-mono font-black text-3xl mt-1 text-[#DC2626]">00:00:00</div>`;
           }
         }
         if (btnIniciar) {
