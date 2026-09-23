@@ -40,6 +40,15 @@ const SmartOpsUI = {
       timerDisplay.textContent = SmartOpsState.formatearTiempo(snapshot.tiempoTranscurridoSegundos);
     }
 
+    // Actualizar display del operario en el header (de solo lectura)
+    if (window.SmartOpsApp && typeof window.SmartOpsApp.actualizarDisplayOperario === 'function') {
+      window.SmartOpsApp.actualizarDisplayOperario(
+        snapshot.operarioId
+          ? { nombre: snapshot.operarioActual, id: snapshot.operarioId }
+          : null
+      );
+    }
+
     switch (snapshot.estadoActual) {
       case SmartOpsConfig.ESTADOS.PRODUCCION:
         if (beaconEl) beaconEl.classList.add('beacon-producing');
@@ -106,8 +115,10 @@ const SmartOpsUI = {
           timerBox.style.boxShadow = '0 4px 20px -4px rgba(249, 115, 22, 0.08), 0 2px 8px rgba(120, 113, 108, 0.04)';
         }
         if (novedadBanner) novedadBanner.classList.add('hidden');
+        // Requiere OP + operario verificado + CT seleccionado para habilitar
+        const puedeIniciar = !!snapshot.opActiva && !!snapshot.operarioId;
         if (btnIniciar) {
-          btnIniciar.disabled = !snapshot.opActiva;
+          btnIniciar.disabled = !puedeIniciar;
           btnIniciar.innerHTML = '<i data-lucide="play-circle" class="w-7 h-7"></i><span>INICIAR LABOR</span>';
         }
         if (btnPausar) btnPausar.disabled = true;

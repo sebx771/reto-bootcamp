@@ -101,24 +101,11 @@ const SmartOpsScanner = {
   },
 
   /**
-   * Permite seleccionar una OP demo sin necesidad de usar la cámara
-   * @param {string} codigo
+   * seleccionarOPDemo eliminado: el dropdown de OPs demo fue removido.
+   * Las OPs se asignan exclusivamente mediante QR del taller.
    */
   seleccionarOPDemo(codigo) {
-    const orden = SmartOpsConfig.ORDENES_DEMO.find(o => o.codigo === codigo);
-    if (orden) {
-      SmartOpsState.asignarOP(orden);
-    } else {
-      SmartOpsState.asignarOP(codigo);
-    }
-
-    if (window.SmartOpsApp) {
-      window.SmartOpsApp.darFeedbackTactil();
-      window.SmartOpsApp.emitirBeepIndustrial(650, 0.08);
-    }
-
-    this.detenerEscaner();
-    this.cerrarModalScanner();
+    console.warn('[Scanner] seleccionarOPDemo() ya no está disponible. Use el QR de taller.');
   },
 
   /**
@@ -147,8 +134,15 @@ const SmartOpsScanner = {
       const res = await SmartOpsAPI.verificarOperario(cedula);
       if (res && res.success && res.operario) {
         const op = res.operario;
-        SmartOpsState.setOperarioActual({ id: String(op.id || cedula), nombre: op.nombre, ctEmpleado: String(op.ctEmpleado || '13') });
-        if (banner) { banner.className = 'p-3 rounded-xl border text-xs mb-2 bg-emerald-50 border-emerald-300 text-emerald-800'; banner.innerHTML = `✓ <strong>${op.nombre}</strong> (CC ${cedula}) identificado correctamente.`; }
+        SmartOpsState.setOperarioActual({
+          id: String(op.id || cedula),
+          nombre: op.nombre,
+          ctEmpleado: String(op.ctEmpleado || '')
+        });
+        if (banner) {
+          banner.className = 'p-3 rounded-xl border text-xs mb-2 bg-emerald-50 border-emerald-300 text-emerald-800';
+          banner.innerHTML = `✓ <strong>${op.nombre}</strong> (CC ${cedula}) identificado correctamente.`;
+        }
         SmartOpsAPI.mostrarNotificacion(`Bienvenido, ${op.nombre}`, 'success');
         if (window.SmartOpsApp) window.SmartOpsApp.darFeedbackTactil();
         setTimeout(() => {
@@ -156,7 +150,7 @@ const SmartOpsScanner = {
           // Si no hay CT-Operación seleccionado, indicarlo
           const ctSelect = document.getElementById('select-ct');
           if (ctSelect && !ctSelect.value) {
-            SmartOpsAPI.mostrarNotificacion('Seleccione el CT-Operación para continuar.', 'info');
+            SmartOpsAPI.mostrarNotificacion('Seleccione el CT-Operación y la OP para continuar.', 'info');
           }
         }, 1200);
       } else {

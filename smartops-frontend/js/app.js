@@ -71,19 +71,58 @@ const SmartOpsApp = {
    * Rellena las opciones de los selectores de CT y Operario
    */
   inicializarSelectoresHeader() {
+    // CT-Operación: selector funcional, el operario lo elige antes de iniciar
     const ctSelect = document.getElementById('select-ct');
-    const operarioSelect = document.getElementById('select-operario');
-
     if (ctSelect && SmartOpsConfig.CENTROS_DE_TRABAJO) {
-      ctSelect.innerHTML = SmartOpsConfig.CENTROS_DE_TRABAJO.map(ct => `
-        <option value="${ct.id}">${ct.id} - ${ct.nombre}</option>
-      `).join('');
+      ctSelect.innerHTML = '<option value="">— Seleccionar CT —</option>' +
+        SmartOpsConfig.CENTROS_DE_TRABAJO.map(ct =>
+          `<option value="${ct.id}">${ct.id} — ${ct.nombre}</option>`
+        ).join('');
+
+      // Sincronizar con el state cada vez que cambia
+      ctSelect.addEventListener('change', (e) => {
+        SmartOpsState.setState({ ctActual: e.target.value });
+        SmartOpsState.guardarSesion();
+      });
     }
 
-    if (operarioSelect && SmartOpsConfig.OPERARIOS_CATALOGO) {
-      operarioSelect.innerHTML = SmartOpsConfig.OPERARIOS_CATALOGO.map(op => `
-        <option value="${op.nombre}">${op.nombre} (${op.id})</option>
-      `).join('');
+    // Operario: campo de solo lectura — se puebla desde la DB al escanear cédula.
+    // No se rellena con nombres demo; el scanner es la única fuente de verdad.
+    this.actualizarDisplayOperario(null);
+
+    // Selector de OP demo: poblado desde ORDENES_DEMO y conectado al state
+    const opDemoSelect = document.getElementById('select-op-demo');
+    if (opDemoSelect && SmartOpsConfig.ORDENES_DEMO) {
+      opDemoSelect.innerHTML =
+        '<option value="">— Seleccionar Orden de Producción —</option>' +
+        SmartOpsConfig.ORDENES_DEMO.map(op =>
+          `<option value="${op.codigo}">${op.codigo} — ${op.descripcion}</option>`
+        ).join('');
+
+      opDemoSelect.addEventListener('change', (e) => {
+        const codigo = e.target.value;
+        if (!codigo) return;
+        const orden = SmartOpsConfig.ORDENES_DEMO.find(o => o.codigo === codigo);
+        SmartOpsState.asignarOP(orden || codigo);
+        this.darFeedbackTactil();
+        this.emitirBeepIndustrial(650, 0.08);
+      });
+    }
+  },
+
+  /**
+   * Actualiza el campo de display del operario en el header.
+   * @param {{ nombre: string, id: string } | null} operario
+   */
+  actualizarDisplayOperario(operario) {
+    const el = document.getElementById('select-operario');
+    if (!el) return;
+    if (operario) {
+      el.value = operario.nombre;        // muestra el nombre en el select existente
+      el.title = `CC ${operario.id}`;   // tooltip con la cédula
+    } else {
+      el.value = '';
+      el.title = '';
     }
   },
 

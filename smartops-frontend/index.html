@@ -76,22 +76,29 @@
           <label for="select-operario" class="block text-[10px] font-bold text-[#8C7164] uppercase tracking-wider mb-1 flex items-center gap-1">
             <i data-lucide="user" class="w-3 h-3 text-[#F97316]"></i> Operario
           </label>
-          <select id="select-operario" class="w-full bg-[#FFF8F5] border border-[#EAE1DA] rounded-xl px-2.5 py-2 text-xs font-bold text-[#1F1B17] focus:outline-none focus:border-[#F97316] transition-colors">
-            <!-- Rellenado dinámicamente desde config.js -->
-          </select>
+          <input
+            id="select-operario"
+            type="text"
+            readonly
+            placeholder="— Escanear cédula —"
+            class="w-full bg-[#FFF8F5] border border-[#EAE1DA] rounded-xl px-2.5 py-2 text-xs font-bold text-[#1F1B17] focus:outline-none cursor-default select-none truncate"
+          >
         </div>
       </div>
     </header>
 
     <!-- ==================================================
-         SECCIÓN B: TARJETA DE OP ACTIVA + DROPDOWN DEMO
+         SECCIÓN B: TARJETA DE OP ACTIVA
          ================================================== -->
     <section class="industrial-card rounded-2xl p-3.5 mb-3">
-      <div class="flex items-start justify-between gap-3">
-        <!-- Datos de la OP -->
+      <div class="flex items-center justify-between gap-3">
+        <!-- Datos de la OP activa -->
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-0.5">
-            <span class="text-[10px] uppercase font-extrabold text-[#8C7164] tracking-wider">Orden de Producción</span>
+            <span class="text-[10px] uppercase font-extrabold text-[#8C7164] tracking-wider flex items-center gap-1">
+              <i data-lucide="clipboard-list" class="w-3 h-3 text-[#F97316]"></i>
+              Orden de Producción
+            </span>
             <span id="op-plano-badge" class="hidden text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-[#FFF2EB] text-[#C2410C] border border-[#FDBA74]">PL-0000</span>
           </div>
           <div id="op-codigo-display" class="text-xl sm:text-2xl font-black font-mono text-[#C2410C] tracking-tight truncate">
@@ -101,14 +108,16 @@
             Seleccione la orden de producción activa.
           </p>
         </div>
-        <!-- Botón identificar operario (reutiliza modal-scanner) -->
+
+        <!-- Botón identificar operario -->
         <button id="btn-abrir-scanner" type="button"
-          class="flex-shrink-0 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-[#F97316] to-[#EA580C] hover:from-[#EA580C] hover:to-[#C2410C] active:scale-95 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1 shadow-md shadow-orange-500/25 cursor-pointer">
-          <i data-lucide="user-scan" class="w-6 h-6"></i>
-          <span>OPERARIO</span>
+          class="flex-shrink-0 px-4 py-3 rounded-xl bg-gradient-to-br from-[#F97316] to-[#C2410C] hover:from-[#EA580C] hover:to-[#9A3412] active:scale-95 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1.5 shadow-lg shadow-orange-500/30 cursor-pointer transition-all">
+          <i data-lucide="user-scan" class="w-7 h-7"></i>
+          <span class="tracking-wide">IDENTIFICAR</span>
         </button>
       </div>
-      <!-- Dropdown de OP demo —visible siempre para selección rápida -->
+
+      <!-- Selector de Orden de Producción (demo / taller) -->
       <select id="select-op-demo"
         class="mt-2.5 w-full bg-[#FFF8F5] border border-[#EAE1DA] hover:border-[#F97316] rounded-xl px-3 py-2 text-xs font-bold text-[#1F1B17] focus:outline-none focus:border-[#F97316] transition-colors cursor-pointer">
         <option value="">— Seleccionar Orden de Producción —</option>
@@ -334,6 +343,10 @@
           <span>Almuerzo / Refrigerio</span>
           <i data-lucide="coffee" class="w-5 h-5 text-[#F59E0B]"></i>
         </button>
+        <button type="button" data-motivo="Necesidades Fisiológicas (Baño)" class="btn-opcion-pausa w-full p-3 text-left rounded-xl bg-[#FFF8F5] hover:bg-[#FCF2EB] border border-[#EAE1DA] hover:border-[#F59E0B] font-bold text-sm text-[#1F1B17] flex items-center justify-between">
+          <span>Ir al Baño</span>
+          <i data-lucide="droplets" class="w-5 h-5 text-[#F59E0B]"></i>
+        </button>
         <button type="button" data-motivo="Reunión / Charla Seguridad 5 Min" class="btn-opcion-pausa w-full p-3 text-left rounded-xl bg-[#FFF8F5] hover:bg-[#FCF2EB] border border-[#EAE1DA] hover:border-[#F59E0B] font-bold text-sm text-[#1F1B17] flex items-center justify-between">
           <span>Charla 5 Min / Seguridad</span>
           <i data-lucide="shield-check" class="w-5 h-5 text-[#F59E0B]"></i>
@@ -414,6 +427,7 @@
        ================================================== -->
   <script src="js/config.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/models.js"></script>
   <script src="js/api.js"></script>
   <script src="js/state.js"></script>
   <script src="js/scanner.js"></script>
