@@ -8,7 +8,9 @@ const SmartOpsState = {
     estadoActual: SmartOpsConfig.ESTADOS.INACTIVO,
     opActiva: null,
     ctActual: 'CT-TORNO-01',
+    ctEmpleado: '01',
     operarioActual: 'Carlos Mendoza',
+    operarioId: 'OP-101',
     tiempoInicio: null,
     tiempoTranscurridoSegundos: 0,
     timerInterval: null,
@@ -42,8 +44,12 @@ const SmartOpsState = {
   set opActiva(value) { this.state.opActiva = value; },
   get ctActual() { return this.state.ctActual; },
   set ctActual(value) { this.state.ctActual = value; },
+  get ctEmpleado() { return this.state.ctEmpleado; },
+  set ctEmpleado(value) { this.state.ctEmpleado = value; },
   get operarioActual() { return this.state.operarioActual; },
   set operarioActual(value) { this.state.operarioActual = value; },
+  get operarioId() { return this.state.operarioId; },
+  set operarioId(value) { this.state.operarioId = value; },
   get tiempoInicio() { return this.state.tiempoInicio; },
   set tiempoInicio(value) { this.state.tiempoInicio = value; },
   get tiempoTranscurridoSegundos() { return this.state.tiempoTranscurridoSegundos; },
@@ -161,7 +167,8 @@ const SmartOpsState = {
     const payload = this.crearPayload('PAUSA_LABOR', {
       motivoPausa: motivo,
       tiempoProduccionSegundos: this.tiempoTranscurridoSegundos,
-      tiempoProduccionFormato: this.formatearTiempo(this.tiempoTranscurridoSegundos)
+      tiempoProduccionFormato: this.formatearTiempo(this.tiempoTranscurridoSegundos),
+      duracionMinutos: Math.round((this.tiempoTranscurridoSegundos / 60) * 10) / 10
     });
     SmartOpsAPI.enviarEvento(payload);
 
@@ -193,11 +200,12 @@ const SmartOpsState = {
     };
 
     const payload = this.crearPayload('PARO_NOVEDAD', {
-      categoria: categoriaId,
+      categoriaDirecta: categoriaId,
       codigoCausa: codigoCausa,
-      descripcionNovedad: detalleCausa,
+      textoNovedad: detalleCausa,
       tiempoProduccionSegundos: this.tiempoTranscurridoSegundos,
-      tiempoProduccionFormato: this.formatearTiempo(this.tiempoTranscurridoSegundos)
+      tiempoProduccionFormato: this.formatearTiempo(this.tiempoTranscurridoSegundos),
+      duracionMinutos: Math.round((this.tiempoTranscurridoSegundos / 60) * 10) / 10
     });
     SmartOpsAPI.enviarEvento(payload);
 
@@ -233,6 +241,7 @@ const SmartOpsState = {
     const payload = this.crearPayload('CIERRE_OP', {
       tiempoTotalProduccionSegundos: duracionFinalSegundos,
       tiempoTotalFormato: duracionFormateada,
+      duracionMinutos: Math.round((this.tiempoTranscurridoSegundos / 60) * 10) / 10,
       novedadesRegistradas: this.novedadActiva ? [this.novedadActiva] : []
     });
     SmartOpsAPI.enviarEvento(payload);
@@ -258,11 +267,13 @@ const SmartOpsState = {
     return {
       formato: 'FO-A-MA-01',
       version: '2026.1',
+      op: this.opActiva ? this.opActiva.codigo : 'N/A',
+      operarioId: this.operarioId || 'SIN_ID',
+      nombreOperario: this.operarioActual,
+      ctOperacion: this.ctActual,
+      ctEmpleado: this.ctEmpleado || '01',
+      timestamp: new Date().toISOString(),
       tipoEvento: tipoEvento,
-      timestampISO: new Date().toISOString(),
-      centroTrabajo: this.ctActual,
-      operario: this.operarioActual,
-      ordenProduccion: this.opActiva ? this.opActiva.codigo : 'N/A',
       descripcionLabor: this.opActiva ? this.opActiva.descripcion : 'N/A',
       plano: this.opActiva?.plano || 'N/A',
       ...dataAdicional
