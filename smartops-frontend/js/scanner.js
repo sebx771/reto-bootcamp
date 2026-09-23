@@ -78,29 +78,26 @@ const SmartOpsScanner = {
   },
 
   /**
-   * Callback ejecutado al decodificar un código QR o de barras
+   * Callback al decodificar QR: extrae cédula del carné del operario
    */
   onScanExitoso(decodedText) {
     if (!decodedText) return;
 
-    // Feedback sonoro y táctil inmediato
+    // Intentar parsear JSON del carné { cedula, nombre, ct } o usar el texto directamente
+    let cedula = decodedText.trim();
+    try {
+      const parsed = JSON.parse(cedula);
+      cedula = String(parsed.cedula || parsed.id || parsed.operarioId || cedula);
+    } catch (e) {}
+    cedula = cedula.replace(/\D/g, '') || cedula;
+
     if (window.SmartOpsApp) {
       window.SmartOpsApp.darFeedbackTactil();
       window.SmartOpsApp.emitirBeepIndustrial(880, 0.1);
     }
 
-    // Normalizar formato de OP (ej. '60211' -> 'OP-60211')
-    let codigoLimpio = decodedText.trim().toUpperCase();
-    if (!codigoLimpio.startsWith('OP-') && /^\d+$/.test(codigoLimpio)) {
-      codigoLimpio = `OP-${codigoLimpio}`;
-    }
-
-    // Asignar OP a la máquina de estados
-    SmartOpsState.asignarOP(codigoLimpio);
-
-    // Detener la cámara y cerrar modal
     this.detenerEscaner();
-    this.cerrarModalScanner();
+    this._identificarOperarioPorCedula(cedula);
   },
 
   /**
@@ -125,22 +122,55 @@ const SmartOpsScanner = {
   },
 
   /**
-   * Procesa el ingreso manual de número de OP
+   * Procesa el ingreso manual de cédula del operario
    */
   procesarIngresoManual() {
     const input = document.getElementById('input-op-manual');
-    if (!input || !input.value.trim()) {
-      SmartOpsAPI.mostrarNotificacion('Ingrese un código de orden válido.', 'warning');
+    const cedula = input ? input.value.trim().replace(/\D/g, '') : '';
+    if (!cedula || cedula.length < 5) {
+      SmartOpsAPI.mostrarNotificacion('Ingrese un número de cédula válido (mín. 5 dígitos).', 'warning');
       return;
     }
+    this._identificarOperarioPorCedula(cedula);
+  },
 
-    let val = input.value.trim().toUpperCase();
-    if (!val.startsWith('OP-') && /^\d+$/.test(val)) {
-      val = `OP-${val}`;
+  /**
+   * Llama al API para verificar la cédula e identifica al operario en el estado
+   */
+  async _identificarOperarioPorCedula(cedula) {
+    const banner = document.getElementById('scanner-resultado');
+    const btnBuscar = document.getElementById('btn-confirmar-op-manual');
+    if (banner) { banner.className = 'p-3 rounded-xl border text-xs mb-2 bg-[#FFF8F5] border-[#EAE1DA] text-[#584237]'; banner.textContent = 'Buscando operario...'; banner.classList.remove('hidden'); }
+    if (btnBuscar) btnBuscar.disabled = true;
+
+    try {
+      const res = await SmartOpsAPI.verificarOperario(cedula);
+      if (res && res.success && res.operario) {
+        const op = res.operario;
+        SmartOpsState.setOperarioActual({ id: String(op.id || cedula), nombre: op.nombre, ctEmpleado: String(op.ctEmpleado || '13') });
+        if (banner) { banner.className = 'p-3 rounded-xl border text-xs mb-2 bg-emerald-50 border-emerald-300 text-emerald-800'; banner.innerHTML = `✓ <strong>${op.nombre}</strong> (CC ${cedula}) identificado correctamente.`; }
+        SmartOpsAPI.mostrarNotificacion(`Bienvenido, ${op.nombre}`, 'success');
+        if (window.SmartOpsApp) window.SmartOpsApp.darFeedbackTactil();
+        setTimeout(() => {
+          this.cerrarModalScanner();
+          // Si no hay CT-Operación seleccionado, indicarlo
+          const ctSelect = document.getElementById('select-ct');
+          if (ctSelect && !ctSelect.value) {
+            SmartOpsAPI.mostrarNotificacion('Seleccione el CT-Operación para continuar.', 'info');
+          }
+        }, 1200);
+      } else {
+        const msg = (res && res.mensaje) ? res.mensaje : `Cédula ${cedula} no encontrada en la base de datos.`;
+        if (banner) { banner.className = 'p-3 rounded-xl border text-xs mb-2 bg-red-50 border-red-300 text-red-700'; banner.textContent = msg; }
+        SmartOpsAPI.mostrarNotificacion(msg, 'error');
+      }
+    } catch (err) {
+      const msg = 'Error de conexión al verificar operario.';
+      if (banner) { banner.className = 'p-3 rounded-xl border text-xs mb-2 bg-red-50 border-red-300 text-red-700'; banner.textContent = msg; }
+      SmartOpsAPI.mostrarNotificacion(msg, 'error');
+    } finally {
+      if (btnBuscar) btnBuscar.disabled = false;
     }
-
-    this.seleccionarOPDemo(val);
-    input.value = '';
   },
 
   /**
@@ -166,31 +196,11 @@ const SmartOpsScanner = {
   },
 
   /**
-   * Renderiza la botonera de órdenes demo en el modal
+   * renderizarBotonesDemo ya no aplica (OP se elige con dropdown externo)
+   * Se mantiene para compatibilidad con app.js que lo llama en init.
    */
   renderizarBotonesDemo() {
-    const container = document.getElementById('demo-ops-list');
-    if (!container) return;
-
-    container.innerHTML = SmartOpsConfig.ORDENES_DEMO.map(op => `
-      <button 
-        type="button" 
-        onclick="SmartOpsScanner.seleccionarOPDemo('${op.codigo}')"
-        class="w-full text-left p-3 rounded-xl bg-[#FFF8F5] hover:bg-[#FFF2EB] border border-[#EAE1DA] hover:border-[#F97316] transition-all flex items-center justify-between group active:scale-98">
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="font-bold text-[#C2410C] font-mono text-base">${op.codigo}</span>
-            <span class="text-xs px-2 py-0.5 rounded font-mono font-bold bg-[#FFF2EB] text-[#C2410C] border border-[#FDBA74]">${op.plano}</span>
-          </div>
-          <p class="text-xs text-[#584237] mt-1 line-clamp-1">${op.descripcion}</p>
-        </div>
-        <i data-lucide="chevron-right" class="w-5 h-5 text-[#8C7164] group-hover:text-[#F97316] transition-colors"></i>
-      </button>
-    `).join('');
-
-    if (window.lucide) {
-      window.lucide.createIcons();
-    }
+    // no-op: el modal ahora pide al operario, no las OPs
   }
 };
 

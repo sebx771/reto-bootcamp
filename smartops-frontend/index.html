@@ -84,29 +84,36 @@
     </header>
 
     <!-- ==================================================
-         SECCIÓN B: TARJETA DE OP ACTIVA & ESCÁNER
+         SECCIÓN B: TARJETA DE OP ACTIVA + DROPDOWN DEMO
          ================================================== -->
     <section class="industrial-card rounded-2xl p-3.5 mb-3">
-      <div class="flex items-center justify-between gap-3">
+      <div class="flex items-start justify-between gap-3">
+        <!-- Datos de la OP -->
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-0.5">
-            <span class="text-[10px] uppercase font-extrabold text-[#8C7164] tracking-wider">Orden de Taller</span>
+            <span class="text-[10px] uppercase font-extrabold text-[#8C7164] tracking-wider">Orden de Producción</span>
             <span id="op-plano-badge" class="hidden text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-[#FFF2EB] text-[#C2410C] border border-[#FDBA74]">PL-0000</span>
           </div>
           <div id="op-codigo-display" class="text-xl sm:text-2xl font-black font-mono text-[#C2410C] tracking-tight truncate">
             SIN OP ASIGNADA
           </div>
           <p id="op-descripcion-display" class="text-xs text-[#584237] truncate mt-0.5">
-            Escanee el código de barras o seleccione una orden demo para iniciar.
+            Seleccione la orden de producción activa.
           </p>
         </div>
-
-        <!-- Botón Masivo Escanear OP -->
-        <button id="btn-abrir-scanner" type="button" class="flex-shrink-0 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-[#F97316] to-[#EA580C] hover:from-[#EA580C] hover:to-[#C2410C] active:scale-95 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1 shadow-md shadow-orange-500/25 cursor-pointer">
-          <i data-lucide="qr-code" class="w-6 h-6"></i>
-          <span>ESCANEAR</span>
+        <!-- Botón identificar operario (reutiliza modal-scanner) -->
+        <button id="btn-abrir-scanner" type="button"
+          class="flex-shrink-0 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-[#F97316] to-[#EA580C] hover:from-[#EA580C] hover:to-[#C2410C] active:scale-95 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1 shadow-md shadow-orange-500/25 cursor-pointer">
+          <i data-lucide="user-scan" class="w-6 h-6"></i>
+          <span>OPERARIO</span>
         </button>
       </div>
+      <!-- Dropdown de OP demo —visible siempre para selección rápida -->
+      <select id="select-op-demo"
+        class="mt-2.5 w-full bg-[#FFF8F5] border border-[#EAE1DA] hover:border-[#F97316] rounded-xl px-3 py-2 text-xs font-bold text-[#1F1B17] focus:outline-none focus:border-[#F97316] transition-colors cursor-pointer">
+        <option value="">— Seleccionar Orden de Producción —</option>
+        <!-- Poblado por app.js desde SmartOpsConfig.ORDENES_DEMO -->
+      </select>
     </section>
 
     <!-- ==================================================
@@ -176,14 +183,20 @@
   </div>
 
   <!-- ==================================================
-       MODAL 1: ESCÁNER QR & FALLBACK DE ÓRDENES DEMO
+       MODAL 1 (REUTILIZADO): IDENTIFICACIÓN DE OPERARIO
+       Abre al presionar botón OPERARIO en Sección B.
+       Permite QR del carné o ingreso manual de cédula.
        ================================================== -->
   <div id="modal-scanner" class="modal-backdrop fixed inset-0 z-50 hidden flex items-center justify-center p-4">
     <div class="modal-content w-full max-w-md rounded-3xl p-5 overflow-hidden flex flex-col max-h-[90vh]">
+      <!-- Cabecera -->
       <div class="flex items-center justify-between pb-3 border-b border-[#F0E6E0] mb-3">
         <div class="flex items-center gap-2">
-          <i data-lucide="camera" class="w-5 h-5 text-[#F97316]"></i>
-          <h3 class="font-extrabold text-lg text-[#1F1B17]">Escanear Orden de Taller</h3>
+          <i data-lucide="user-check" class="w-5 h-5 text-[#F97316]"></i>
+          <div>
+            <h3 class="font-extrabold text-lg text-[#1F1B17]">Identificar Operario</h3>
+            <p class="text-[11px] text-[#8C7164]">Escanee su carné QR o ingrese su cédula</p>
+          </div>
         </div>
         <button id="btn-cerrar-scanner" type="button" class="p-2 rounded-xl bg-[#F6ECE6] text-[#584237] hover:bg-[#EAE1DA]">
           <i data-lucide="x" class="w-5 h-5"></i>
@@ -191,34 +204,32 @@
       </div>
 
       <div class="overflow-y-auto flex-1 pr-1">
-        <!-- Visor de Cámara html5-qrcode -->
-        <div id="qr-reader-container" class="w-full bg-[#1F1B17] rounded-2xl overflow-hidden border border-[#EAE1DA] mb-3 min-h-[220px] flex items-center justify-center text-xs text-slate-300">
+        <!-- Visor de Cámara QR (carné del operario) -->
+        <div id="qr-reader-container" class="w-full bg-[#1F1B17] rounded-2xl overflow-hidden border border-[#EAE1DA] mb-3 min-h-[200px] flex items-center justify-center text-xs text-slate-300">
           Iniciando cámara...
         </div>
 
+        <!-- Aviso si la cámara no está disponible -->
         <div id="camera-fallback-notice" class="hidden p-3 rounded-xl bg-[#FFF2EB] border border-[#FDBA74] text-xs text-[#9D4300] mb-3">
-          <p class="font-bold">Cámara no disponible en este dispositivo o permisos no otorgados.</p>
-          <p class="text-[11px] text-[#C2410C] mt-0.5">Use las órdenes demo a continuación o ingrese el número manualmente.</p>
+          <p class="font-bold">Cámara no disponible.</p>
+          <p class="text-[11px] text-[#C2410C] mt-0.5">Ingrese la cédula manualmente abajo.</p>
         </div>
 
-        <!-- Ingreso Manual de OP -->
-        <div class="mb-4">
-          <label class="block text-xs font-bold text-[#8C7164] uppercase mb-1">Ingreso Numérico Manual</label>
+        <!-- Ingreso Manual de Cédula -->
+        <div class="mb-2">
+          <label class="block text-xs font-bold text-[#8C7164] uppercase mb-1">Número de Cédula</label>
           <div class="flex gap-2">
-            <input id="input-op-manual" type="text" placeholder="Ej. 60211" class="flex-1 bg-[#FFF8F5] border border-[#EAE1DA] rounded-xl px-3 py-2 text-sm font-mono font-bold text-[#C2410C] focus:outline-none focus:border-[#F97316]">
-            <button id="btn-confirmar-op-manual" type="button" class="px-4 py-2 bg-[#F97316] hover:bg-[#EA580C] font-bold text-xs rounded-xl text-white">
-              CARGAR
+            <input id="input-op-manual" type="number" inputmode="numeric" placeholder="Ej. 1234567890"
+              class="flex-1 bg-[#FFF8F5] border border-[#EAE1DA] rounded-xl px-3 py-2 text-sm font-mono font-bold text-[#C2410C] focus:outline-none focus:border-[#F97316]">
+            <button id="btn-confirmar-op-manual" type="button"
+              class="px-4 py-2 bg-[#F97316] hover:bg-[#EA580C] font-bold text-xs rounded-xl text-white cursor-pointer">
+              BUSCAR
             </button>
           </div>
         </div>
 
-        <!-- Lista de OPs Demo para 1 toque -->
-        <div>
-          <label class="block text-xs font-bold text-[#8C7164] uppercase mb-2">Órdenes Demo (1 Toque)</label>
-          <div id="demo-ops-list" class="space-y-2">
-            <!-- Rellenado por scanner.js -->
-          </div>
-        </div>
+        <!-- Banner de resultado / error -->
+        <div id="scanner-resultado" class="hidden p-3 rounded-xl border text-xs mb-2"></div>
       </div>
     </div>
   </div>
