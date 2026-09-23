@@ -17,7 +17,8 @@ const SmartOpsModels = {
     'FALLA_MAQUINA': 'Falla Técnica / Mantenimiento',
     'SETUP':         'Alistamiento y Preparación (Setup)',
     'CALIDAD':       'Calidad y Aprobación',
-    'INSTRUCCION':   'Instrucciones / Coordinación'
+    'INSTRUCCION':   'Instrucciones / Coordinación',
+    'ACCIDENTE':     'Accidente / Incidente de Seguridad'
   }),
 
   /**

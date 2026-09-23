@@ -32,7 +32,8 @@ function doPost(e) {
           "Espera de Materiales / Logística":    "MATERIAL",
           "Falla Técnica / Mantenimiento":       "FALLA_MAQUINA",
           "Calidad y Aprobación":                "CALIDAD",
-          "Instrucciones / Coordinación":        "INSTRUCCION"
+          "Instrucciones / Coordinación":        "INSTRUCCION",
+          "Accidente / Incidente de Seguridad":  "ACCIDENTE"
         };
 
         respuesta = {
@@ -317,24 +318,26 @@ const CATEGORIAS_OFICIALES = [
   "Espera de Materiales / Logística",
   "Falla Técnica / Mantenimiento",
   "Calidad y Aprobación",
-  "Instrucciones / Coordinación"
+  "Instrucciones / Coordinación",
+  "Accidente / Incidente de Seguridad"
 ];
 
 function clasificarConGemini(textoOperario) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
   
   const systemPrompt = `Eres un asistente de analítica industrial para la planta metalmecánica de SuperBrix S.A.
-Tu tarea es analizar el reporte de un operario de taller y clasificarlo estrictamente en una de las siguientes 6 categorías:
+Tu tarea es analizar el reporte de un operario de taller y clasificarlo estrictamente en una de las siguientes 7 categorías:
 1. "Producción Activa"
 2. "Alistamiento y Preparación (Setup)"
 3. "Espera de Materiales / Logística"
 4. "Falla Técnica / Mantenimiento"
 5. "Calidad y Aprobación"
 6. "Instrucciones / Coordinación"
+7. "Accidente / Incidente de Seguridad"
 
 Responde EXCLUSIVAMENTE un objeto JSON válido con este formato:
 {
-  "categoria": "<Una de las 6 categorías exactas>",
+  "categoria": "<Una de las 7 categorías exactas>",
   "causa": "<Breve resumen de la causa raíz en 4 palabras>"
 }`;
 
@@ -383,17 +386,18 @@ Responde EXCLUSIVAMENTE un objeto JSON válido con este formato:
 function clasificarConGroq(textoOperario) {
   const url = "https://api.groq.com/openai/v1/chat/completions";
   const systemPrompt = `Eres un asistente de analítica industrial para la planta metalmecánica de SuperBrix S.A.
-Tu tarea es analizar el reporte de un operario de taller y clasificarlo estrictamente en una de las siguientes 6 categorías:
+Tu tarea es analizar el reporte de un operario de taller y clasificarlo estrictamente en una de las siguientes 7 categorías:
 1. "Producción Activa"
 2. "Alistamiento y Preparación (Setup)"
 3. "Espera de Materiales / Logística"
 4. "Falla Técnica / Mantenimiento"
 5. "Calidad y Aprobación"
 6. "Instrucciones / Coordinación"
+7. "Accidente / Incidente de Seguridad"
 
 Responde EXCLUSIVAMENTE un objeto JSON válido con este formato:
 {
-  "categoria": "<Una de las 6 categorías exactas>",
+  "categoria": "<Una de las 7 categorías exactas>",
   "causa": "<Breve resumen de la causa raíz en 4 palabras>"
 }`;
 

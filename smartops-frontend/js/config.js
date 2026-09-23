@@ -59,6 +59,13 @@ const CATEGORIAS_OFICIALES = [
     icono: 'file-text',
     color: '#10B981',
     descripcion: 'Duda en plano, falta de especificación o supervisor'
+  },
+  {
+    id: 'ACCIDENTE',
+    nombre: 'Accidente / Incidente',
+    icono: 'shield-alert',
+    color: '#DC2626',
+    descripcion: 'Accidente laboral, incidente de seguridad o riesgo inminente'
   }
 ];
 

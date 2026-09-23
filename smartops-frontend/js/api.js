@@ -205,6 +205,11 @@ const SmartOpsAPI = {
       return { categoriaId: 'INSTRUCCION', categoriaNombre: 'Instrucción / Planos', confianza: 93,
         explicacion: 'Falta de información técnica, duda en cotas de plano o espera de validación técnica.', fuenteIA: 'local' };
     }
+    if (t.includes('accidente') || t.includes('incidente') || t.includes('herido') || t.includes('riesgo') ||
+        t.includes('seguridad') || t.includes('corte') || t.includes('golpe')) {
+      return { categoriaId: 'ACCIDENTE', categoriaNombre: 'Accidente / Incidente', confianza: 96,
+        explicacion: 'Reporte de incidente de seguridad, accidente laboral o riesgo inminente detectado.', fuenteIA: 'local' };
+    }
     // Fallback genérico
     return { categoriaId: 'FALLA_MAQUINA', categoriaNombre: 'Falla Máquina', confianza: 75,
       explicacion: 'Clasificado preventivamente como Falla Máquina / Novedad operativa imprevista.', fuenteIA: 'local' };
